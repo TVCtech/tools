@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LED Resistor Calculator</title>
+<style>
+    :root {
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --border: #d8dde3;
+        --text: #1a1f2b;
+        --muted: #5a6470;
+        --accent: #2563eb;
+        --accent-soft: #e8f0fe;
+        --best: #d1f4dd;
+        --best-border: #4caf50;
+        --warn: #fff4cc;
+        --warn-border: #f59e0b;
+        --bad: #ffe0e0;
+        --bad-border: #dc2626;
+        --code: #f1f3f6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        padding: 24px 16px;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    h1 {
+        font-size: 1.6rem;
+        margin: 0 0 4px 0;
+    }
+
+    h2 {
+        font-size: 1.15rem;
+        margin: 0 0 12px 0;
+    }
+
+    .subtitle {
+        color: var(--muted);
+        margin: 0 0 24px 0;
+        font-size: 0.95rem;
+    }
+
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .row.two {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .row.four {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    @media (max-width: 760px) {
+        .row, .row.two, .row.four { grid-template-columns: 1fr; }
+    }
+
+    label {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+
+    input[type="number"],
+    select {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 0.95rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: white;
+        color: var(--text);
+        font-family: inherit;
+    }
+
+    input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .help {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    .results-section {
+        margin-top: 8px;
+    }
+
+    .group-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 16px 0 8px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .highlight {
+        color: var(--accent);
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    @media (max-width: 760px) {
+        .summary-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+        .summary-grid { grid-template-columns: 1fr; }
+    }
+
+    .summary-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        background: #fbfcfd;
+    }
+
+    .summary-card.best {
+        background: var(--best);
+        border-color: var(--best-border);
+    }
+
+    .summary-label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 3px;
+    }
+
+    .summary-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    th {
+        text-align: left;
+        padding: 8px 10px;
+        font-weight: 600;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    tr.best td {
+        background: var(--best);
+    }
+
+    tr.best td:first-child {
+        border-left: 3px solid var(--best-border);
+    }
+
+    tr.warn td {
+        background: var(--warn);
+    }
+
+    tr.warn td:first-child {
+        border-left: 3px solid var(--warn-border);
+    }
+
+    tr.bad td {
+        background: var(--bad);
+    }
+
+    tr.bad td:first-child {
+        border-left: 3px solid var(--bad-border);
+    }
+
+    .value-cell {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 0.7rem;
+        background: var(--best-border);
+        color: white;
+        border-radius: 3px;
+        margin-left: 6px;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+    }
+
+    .badge.warn {
+        background: var(--warn-border);
+    }
+
+    .badge.bad {
+        background: var(--bad-border);
+    }
+
+    .empty {
+        color: var(--muted);
+        font-style: italic;
+        padding: 12px 0;
+    }
+
+    .num-right {
+        text-align: right;
+    }
+
+    .note {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 12px;
+    }
+
+    .footer-note {
+        margin-top: 24px;
+        font-size: 0.8rem;
+        color: var(--muted);
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>LED Resistor Calculator</h1>
+    <p class="subtitle">Calculate the nearest E96 resistor value, LED current and resistor power dissipation.</p>
+
+    <div class="panel">
+        <h2>Basic LED resistor calculator</h2>
+        <div class="row four">
+            <div>
+                <label for="basicSupplyVoltage">Supply voltage (V)</label>
+                <input type="number" id="basicSupplyVoltage" value="12" step="0.1" min="0">
+                <div class="help">Nominal supply voltage.</div>
+            </div>
+            <div>
+                <label for="basicLedVoltage">LED forward voltage (V)</label>
+                <input type="number" id="basicLedVoltage" value="2" step="0.01" min="0">
+                <div class="help">Typical LED voltage, e.g. red ≈ 2 V.</div>
+            </div>
+            <div>
+                <label for="basicLedCurrent">Target LED current (mA)</label>
+                <input type="number" id="basicLedCurrent" value="20" step="0.1" min="0">
+                <div class="help">Desired current through the LED.</div>
+            </div>
+            <div>
+                <label for="basicPowerMargin">Power margin</label>
+                <select id="basicPowerMargin">
+                    <option value="1">No margin</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2" selected>2× recommended</option>
+                    <option value="3">3×</option>
+                </select>
+                <div class="help">Suggested resistor wattage safety margin.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel results-section" id="basicResultsPanel">
+        <!-- Basic results render here -->
+    </div>
+
+    <div class="panel">
+        <h2>Voltage fluctuation current calculator</h2>
+        <div class="row four">
+            <div>
+                <label for="fluctNominalVoltage">Nominal supply voltage (V)</label>
+                <input type="number" id="fluctNominalVoltage" value="12" step="0.1" min="0">
+                <div class="help">Normal supply voltage.</div>
+            </div>
+            <div>
+                <label for="fluctLowVoltage">Low supply voltage (V)</label>
+                <input type="number" id="fluctLowVoltage" value="10" step="0.1" min="0">
+                <div class="help">Lowest expected supply voltage.</div>
+            </div>
+            <div>
+                <label for="fluctHighVoltage">High supply voltage (V)</label>
+                <input type="number" id="fluctHighVoltage" value="14" step="0.1" min="0">
+                <div class="help">Highest expected supply voltage.</div>
+            </div>
+            <div>
+                <label for="fluctLedVoltage">LED forward voltage (V)</label>
+                <input type="number" id="fluctLedVoltage" value="2" step="0.01" min="0">
+                <div class="help">Typical LED voltage.</div>
+            </div>
+        </div>
+
+        <div class="row two">
+            <div>
+                <label for="fluctTargetCurrent">Target current at nominal voltage (mA)</label>
+                <input type="number" id="fluctTargetCurrent" value="20" step="0.1" min="0">
+                <div class="help">Used to choose the nearest E96 resistor.</div>
+            </div>
+            <div>
+                <label for="fluctPowerMargin">Power margin</label>
+                <select id="fluctPowerMargin">
+                    <option value="1">No margin</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2" selected>2× recommended</option>
+                    <option value="3">3×</option>
+                </select>
+                <div class="help">Suggested wattage based on worst-case resistor power.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel results-section" id="fluctResultsPanel">
+        <!-- Fluctuation results render here -->
+    </div>
+
+    <div class="panel">
+        <h2>Known resistor voltage fluctuation calculator</h2>
+        <div class="row four">
+            <div>
+                <label for="knownNominalVoltage">Nominal supply voltage (V)</label>
+                <input type="number" id="knownNominalVoltage" value="12" step="0.1" min="0">
+                <div class="help">Normal supply voltage.</div>
+            </div>
+            <div>
+                <label for="knownLowVoltage">Low supply voltage (V)</label>
+                <input type="number" id="knownLowVoltage" value="10" step="0.1" min="0">
+                <div class="help">Lowest expected supply voltage.</div>
+            </div>
+            <div>
+                <label for="knownHighVoltage">High supply voltage (V)</label>
+                <input type="number" id="knownHighVoltage" value="14" step="0.1" min="0">
+                <div class="help">Highest expected supply voltage.</div>
+            </div>
+            <div>
+                <label for="knownLedVoltage">LED forward voltage (V)</label>
+                <input type="number" id="knownLedVoltage" value="2" step="0.01" min="0">
+                <div class="help">Typical LED voltage drop.</div>
+            </div>
+        </div>
+
+        <div class="row two">
+            <div>
+                <label for="knownResistorValue">Resistor value (Ω)</label>
+                <input type="number" id="knownResistorValue" value="470" step="0.1" min="0">
+                <div class="help">Enter the fitted resistor value in ohms.</div>
+            </div>
+            <div>
+                <label for="knownPowerMargin">Power margin</label>
+                <select id="knownPowerMargin">
+                    <option value="1">No margin</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2" selected>2× recommended</option>
+                    <option value="3">3×</option>
+                </select>
+                <div class="help">Suggested wattage based on worst-case resistor power.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel results-section" id="knownResultsPanel">
+        <!-- Known resistor results render here -->
+    </div>
+
+    <div class="footer-note">Formula: R = (Vs − Vf) / I. Resistor power: P = I²R = (Vs − Vf) × I.</div>
+</div>
+
+<script>
+    // E96 preferred values for one decade.
+    // Values are scaled up or down by powers of 10 to find the nearest real resistor value.
+    const E96_BASE = [
+        100, 102, 105, 107, 110, 113, 115, 118,
+        121, 124, 127, 130, 133, 137, 140, 143,
+        147, 150, 154, 158, 162, 165, 169, 174,
+        178, 182, 187, 191, 196, 200, 205, 210,
+        215, 221, 226, 232, 237, 243, 249, 255,
+        261, 267, 274, 280, 287, 294, 301, 309,
+        316, 324, 332, 340, 348, 357, 365, 374,
+        383, 392, 402, 412, 422, 432, 442, 453,
+        464, 475, 487, 499, 511, 523, 536, 549,
+        562, 576, 590, 604, 619, 634, 649, 665,
+        681, 698, 715, 732, 750, 768, 787, 806,
+        825, 845, 866, 887, 909, 931, 953, 976
+    ];
+
+    const STANDARD_WATTS = [0.125, 0.25, 0.5, 1, 2, 3, 5, 10];
+
+    function numberValue(id) {
+        return parseFloat(document.getElementById(id).value);
+    }
+
+    function formatOhms(value) {
+        if (!isFinite(value)) return '—';
+        if (value >= 1000000) return `${(value / 1000000).toFixed(3).replace(/\.0+$/, '')} MΩ`;
+        if (value >= 1000) return `${(value / 1000).toFixed(3).replace(/\.0+$/, '')} kΩ`;
+        return `${value.toFixed(value < 10 ? 2 : 1).replace(/\.0$/, '')} Ω`;
+    }
+
+    function formatMilliAmps(amps) {
+        if (!isFinite(amps)) return '—';
+        return `${(amps * 1000).toFixed(2)} mA`;
+    }
+
+    function formatWatts(watts) {
+        if (!isFinite(watts)) return '—';
+        if (watts < 1) return `${(watts * 1000).toFixed(1)} mW`;
+        return `${watts.toFixed(3)} W`;
+    }
+
+    function nearestStandardWatt(powerWatts, margin) {
+        const required = powerWatts * margin;
+        for (const watt of STANDARD_WATTS) {
+            if (watt >= required) return watt;
+        }
+        return null;
+    }
+
+    function formatWattRating(watt) {
+        if (watt === null) return '>10 W';
+        if (watt === 0.125) return '1/8 W';
+        if (watt === 0.25) return '1/4 W';
+        if (watt === 0.5) return '1/2 W';
+        return `${watt} W`;
+    }
+
+    function nearestE96(targetOhms) {
+        if (!isFinite(targetOhms) || targetOhms <= 0) return null;
+
+        const exponent = Math.floor(Math.log10(targetOhms / 100));
+        const candidates = [];
+
+        for (let decade = exponent - 1; decade <= exponent + 1; decade++) {
+            const scale = Math.pow(10, decade);
+            for (const base of E96_BASE) {
+                candidates.push(base * scale);
+            }
+        }
+
+        candidates.sort((a, b) => Math.abs(a - targetOhms) - Math.abs(b - targetOhms));
+        return candidates[0];
+    }
+
+    function getNearbyE96(targetOhms, countEachSide = 3) {
+        if (!isFinite(targetOhms) || targetOhms <= 0) return [];
+
+        const values = [];
+        const minDecade = Math.floor(Math.log10(targetOhms / 100)) - 2;
+        const maxDecade = Math.floor(Math.log10(targetOhms / 100)) + 2;
+
+        for (let decade = minDecade; decade <= maxDecade; decade++) {
+            const scale = Math.pow(10, decade);
+            for (const base of E96_BASE) {
+                values.push(base * scale);
+            }
+        }
+
+        values.sort((a, b) => a - b);
+
+        const nearest = nearestE96(targetOhms);
+        const nearestIndex = values.findIndex(v => Math.abs(v - nearest) < 0.0000001);
+        const start = Math.max(0, nearestIndex - countEachSide);
+        const end = Math.min(values.length, nearestIndex + countEachSide + 1);
+
+        return values.slice(start, end).map(value => ({
+            value,
+            isNearest: Math.abs(value - nearest) < 0.0000001
+        }));
+    }
+
+    function ledCurrent(supplyVoltage, ledVoltage, resistorOhms) {
+        const resistorVoltage = supplyVoltage - ledVoltage;
+        if (resistorVoltage <= 0 || resistorOhms <= 0) return 0;
+        return resistorVoltage / resistorOhms;
+    }
+
+    function resistorPower(supplyVoltage, ledVoltage, resistorOhms) {
+        const current = ledCurrent(supplyVoltage, ledVoltage, resistorOhms);
+        return current * current * resistorOhms;
+    }
+
+    function validateBasic(vs, vf, ma) {
+        if ([vs, vf, ma].some(v => isNaN(v))) return 'Enter valid numbers.';
+        if (vs <= 0) return 'Supply voltage must be greater than zero.';
+        if (vf < 0) return 'LED forward voltage cannot be negative.';
+        if (ma <= 0) return 'Target current must be greater than zero.';
+        if (vs <= vf) return 'Supply voltage must be higher than the LED forward voltage.';
+        return '';
+    }
+
+    function validateKnownResistor(vs, vf, resistorOhms) {
+        if ([vs, vf, resistorOhms].some(v => isNaN(v))) return 'Enter valid numbers.';
+        if (vs <= 0) return 'Supply voltage must be greater than zero.';
+        if (vf < 0) return 'LED forward voltage cannot be negative.';
+        if (resistorOhms <= 0) return 'Resistor value must be greater than zero.';
+        if (vs <= vf) return 'Supply voltage must be higher than the LED forward voltage.';
+        return '';
+    }
+
+    function renderBasicResults() {
+        const vs = numberValue('basicSupplyVoltage');
+        const vf = numberValue('basicLedVoltage');
+        const targetMa = numberValue('basicLedCurrent');
+        const margin = numberValue('basicPowerMargin');
+        const panel = document.getElementById('basicResultsPanel');
+
+        const error = validateBasic(vs, vf, targetMa);
+        if (error) {
+            panel.innerHTML = `<div class="empty">${error}</div>`;
+            return;
+        }
+
+        const targetAmps = targetMa / 1000;
+        const idealOhms = (vs - vf) / targetAmps;
+        const selectedOhms = nearestE96(idealOhms);
+        const actualAmps = ledCurrent(vs, vf, selectedOhms);
+        const actualPower = resistorPower(vs, vf, selectedOhms);
+        const wattRating = nearestStandardWatt(actualPower, margin);
+        const currentError = ((actualAmps - targetAmps) / targetAmps) * 100;
+        const nearby = getNearbyE96(idealOhms, 3);
+
+        let html = `
+            <div class="group-header">Recommended result</div>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Ideal resistor</div>
+                    <div class="summary-value">${formatOhms(idealOhms)}</div>
+                </div>
+                <div class="summary-card best">
+                    <div class="summary-label">Nearest E96 resistor</div>
+                    <div class="summary-value">${formatOhms(selectedOhms)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Actual current</div>
+                    <div class="summary-value">${formatMilliAmps(actualAmps)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Suggested wattage</div>
+                    <div class="summary-value">${formatWattRating(wattRating)}</div>
+                </div>
+            </div>
+            <div class="note">Actual resistor power is ${formatWatts(actualPower)}. Current error versus target is ${currentError >= 0 ? '+' : ''}${currentError.toFixed(2)}%.</div>
+            <div class="group-header">Nearby E96 values</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resistor</th>
+                        <th class="num-right">Current</th>
+                        <th class="num-right">Power</th>
+                        <th class="num-right">Current error</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        nearby.forEach(item => {
+            const amps = ledCurrent(vs, vf, item.value);
+            const power = resistorPower(vs, vf, item.value);
+            const err = ((amps - targetAmps) / targetAmps) * 100;
+            html += `
+                <tr class="${item.isNearest ? 'best' : ''}">
+                    <td class="value-cell">${formatOhms(item.value)}${item.isNearest ? '<span class="badge">nearest</span>' : ''}</td>
+                    <td class="num-right">${formatMilliAmps(amps)}</td>
+                    <td class="num-right">${formatWatts(power)}</td>
+                    <td class="num-right">${err >= 0 ? '+' : ''}${err.toFixed(2)}%</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        panel.innerHTML = html;
+    }
+
+    function renderFluctResults() {
+        const nominalVs = numberValue('fluctNominalVoltage');
+        const lowVs = numberValue('fluctLowVoltage');
+        const highVs = numberValue('fluctHighVoltage');
+        const vf = numberValue('fluctLedVoltage');
+        const targetMa = numberValue('fluctTargetCurrent');
+        const margin = numberValue('fluctPowerMargin');
+        const panel = document.getElementById('fluctResultsPanel');
+
+        const error = validateBasic(nominalVs, vf, targetMa);
+        if (error) {
+            panel.innerHTML = `<div class="empty">${error}</div>`;
+            return;
+        }
+
+        if ([lowVs, highVs].some(v => isNaN(v))) {
+            panel.innerHTML = '<div class="empty">Enter valid low and high supply voltages.</div>';
+            return;
+        }
+
+        if (lowVs > nominalVs || highVs < nominalVs || lowVs > highVs) {
+            panel.innerHTML = '<div class="empty">Use this order: low voltage ≤ nominal voltage ≤ high voltage.</div>';
+            return;
+        }
+
+        const targetAmps = targetMa / 1000;
+        const idealOhms = (nominalVs - vf) / targetAmps;
+        const selectedOhms = nearestE96(idealOhms);
+
+        const points = [
+            { label: 'Low', voltage: lowVs },
+            { label: 'Nominal', voltage: nominalVs },
+            { label: 'High', voltage: highVs }
+        ];
+
+        const worstPower = Math.max(...points.map(p => resistorPower(p.voltage, vf, selectedOhms)));
+        const wattRating = nearestStandardWatt(worstPower, margin);
+
+        let html = `
+            <div class="group-header">Selected resistor: <span class="highlight">${formatOhms(selectedOhms)}</span></div>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Ideal resistor</div>
+                    <div class="summary-value">${formatOhms(idealOhms)}</div>
+                </div>
+                <div class="summary-card best">
+                    <div class="summary-label">Nearest E96 resistor</div>
+                    <div class="summary-value">${formatOhms(selectedOhms)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Worst-case power</div>
+                    <div class="summary-value">${formatWatts(worstPower)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Suggested wattage</div>
+                    <div class="summary-value">${formatWattRating(wattRating)}</div>
+                </div>
+            </div>
+            <div class="group-header">Current change with supply voltage</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th class="num-right">Supply voltage</th>
+                        <th class="num-right">LED current</th>
+                        <th class="num-right">Resistor power</th>
+                        <th class="num-right">Vs nominal current</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        points.forEach(p => {
+            const amps = ledCurrent(p.voltage, vf, selectedOhms);
+            const power = resistorPower(p.voltage, vf, selectedOhms);
+            const err = targetAmps === 0 ? 0 : ((amps - targetAmps) / targetAmps) * 100;
+            let rowClass = '';
+            let badge = '';
+
+            if (p.label === 'Nominal') {
+                rowClass = 'best';
+                badge = '<span class="badge">nominal</span>';
+            } else if (p.voltage <= vf) {
+                rowClass = 'bad';
+                badge = '<span class="badge bad">off</span>';
+            } else if (Math.abs(err) > 20) {
+                rowClass = 'warn';
+                badge = '<span class="badge warn">large change</span>';
+            }
+
+            html += `
+                <tr class="${rowClass}">
+                    <td class="value-cell">${p.label}${badge}</td>
+                    <td class="num-right">${p.voltage.toFixed(2)} V</td>
+                    <td class="num-right">${formatMilliAmps(amps)}</td>
+                    <td class="num-right">${formatWatts(power)}</td>
+                    <td class="num-right">${err >= 0 ? '+' : ''}${err.toFixed(2)}%</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </tbody>
+            </table>
+            <div class="note">This assumes LED forward voltage stays constant. Real LEDs vary with temperature and manufacturing tolerance, so use this as a practical estimate.</div>
+        `;
+
+        panel.innerHTML = html;
+    }
+
+    function renderKnownResults() {
+        const nominalVs = numberValue('knownNominalVoltage');
+        const lowVs = numberValue('knownLowVoltage');
+        const highVs = numberValue('knownHighVoltage');
+        const vf = numberValue('knownLedVoltage');
+        const resistorOhms = numberValue('knownResistorValue');
+        const margin = numberValue('knownPowerMargin');
+        const panel = document.getElementById('knownResultsPanel');
+
+        const error = validateKnownResistor(nominalVs, vf, resistorOhms);
+        if (error) {
+            panel.innerHTML = `<div class="empty">${error}</div>`;
+            return;
+        }
+
+        if ([lowVs, highVs].some(v => isNaN(v))) {
+            panel.innerHTML = '<div class="empty">Enter valid low and high supply voltages.</div>';
+            return;
+        }
+
+        if (lowVs > nominalVs || highVs < nominalVs || lowVs > highVs) {
+            panel.innerHTML = '<div class="empty">Use this order: low voltage ≤ nominal voltage ≤ high voltage.</div>';
+            return;
+        }
+
+        const points = [
+            { label: 'Low', voltage: lowVs },
+            { label: 'Nominal', voltage: nominalVs },
+            { label: 'High', voltage: highVs }
+        ];
+
+        const nominalAmps = ledCurrent(nominalVs, vf, resistorOhms);
+        const worstPower = Math.max(...points.map(p => resistorPower(p.voltage, vf, resistorOhms)));
+        const wattRating = nearestStandardWatt(worstPower, margin);
+
+        let html = `
+            <div class="group-header">Result for <span class="highlight">${formatOhms(resistorOhms)}</span></div>
+            <div class="summary-grid">
+                <div class="summary-card best">
+                    <div class="summary-label">Nominal current</div>
+                    <div class="summary-value">${formatMilliAmps(nominalAmps)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Worst-case power</div>
+                    <div class="summary-value">${formatWatts(worstPower)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Suggested wattage</div>
+                    <div class="summary-value">${formatWattRating(wattRating)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">LED forward voltage</div>
+                    <div class="summary-value">${vf.toFixed(2)} V</div>
+                </div>
+            </div>
+            <div class="group-header">Current change with known resistor</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th class="num-right">Supply voltage</th>
+                        <th class="num-right">Voltage across resistor</th>
+                        <th class="num-right">LED current</th>
+                        <th class="num-right">Resistor power</th>
+                        <th class="num-right">Vs nominal current</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        points.forEach(p => {
+            const resistorVoltage = Math.max(0, p.voltage - vf);
+            const amps = ledCurrent(p.voltage, vf, resistorOhms);
+            const power = resistorPower(p.voltage, vf, resistorOhms);
+            const err = nominalAmps === 0 ? 0 : ((amps - nominalAmps) / nominalAmps) * 100;
+            let rowClass = '';
+            let badge = '';
+
+            if (p.label === 'Nominal') {
+                rowClass = 'best';
+                badge = '<span class="badge">nominal</span>';
+            } else if (p.voltage <= vf) {
+                rowClass = 'bad';
+                badge = '<span class="badge bad">off</span>';
+            } else if (amps > 0.03 || Math.abs(err) > 20) {
+                rowClass = 'warn';
+                badge = amps > 0.03 ? '<span class="badge warn">high current</span>' : '<span class="badge warn">large change</span>';
+            }
+
+            html += `
+                <tr class="${rowClass}">
+                    <td class="value-cell">${p.label}${badge}</td>
+                    <td class="num-right">${p.voltage.toFixed(2)} V</td>
+                    <td class="num-right">${resistorVoltage.toFixed(2)} V</td>
+                    <td class="num-right">${formatMilliAmps(amps)}</td>
+                    <td class="num-right">${formatWatts(power)}</td>
+                    <td class="num-right">${err >= 0 ? '+' : ''}${err.toFixed(2)}%</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </tbody>
+            </table>
+            <div class="note">Formula used: current = (supply voltage − LED forward voltage) ÷ ${formatOhms(resistorOhms)}.</div>
+        `;
+
+        panel.innerHTML = html;
+    }
+
+    function renderAll() {
+        renderBasicResults();
+        renderFluctResults();
+        renderKnownResults();
+    }
+
+    [
+        'basicSupplyVoltage',
+        'basicLedVoltage',
+        'basicLedCurrent',
+        'basicPowerMargin',
+        'fluctNominalVoltage',
+        'fluctLowVoltage',
+        'fluctHighVoltage',
+        'fluctLedVoltage',
+        'fluctTargetCurrent',
+        'fluctPowerMargin',
+        'knownNominalVoltage',
+        'knownLowVoltage',
+        'knownHighVoltage',
+        'knownLedVoltage',
+        'knownResistorValue',
+        'knownPowerMargin'
+    ].forEach(id => {
+        const element = document.getElementById(id);
+        element.addEventListener('input', renderAll);
+        element.addEventListener('change', renderAll);
+    });
+
+    // Initial render
+    renderAll();
+</script>
+</body>
+</html>
