@@ -62,6 +62,47 @@
         margin-bottom: 16px;
     }
 
+    .top-bar {
+        margin-bottom: 16px;
+    }
+
+    .back-button {
+        display: inline-block;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .back-button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .calculator-card {
+        overflow: hidden;
+    }
+
+    .calculator-inputs {
+        padding-bottom: 16px;
+    }
+
+    .calculator-results {
+        margin: 4px -20px -20px -20px;
+        padding: 18px 20px 20px 20px;
+        border-top: 1px solid var(--border);
+        background: #fbfcfd;
+    }
+
+    .calculator-results .group-header:first-child {
+        margin-top: 0;
+    }
+
     .row {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
@@ -269,12 +310,17 @@
 </head>
 <body>
 <div class="container">
+    <div class="top-bar">
+        <a class="back-button" href="index.html">← Back to Tools</a>
+    </div>
+
     <h1>LED Resistor Calculator</h1>
     <p class="subtitle">Calculate the nearest E96 resistor value, LED current and resistor power dissipation.</p>
 
-    <div class="panel">
-        <h2>Basic LED resistor calculator</h2>
-        <div class="row four">
+    <div class="panel calculator-card">
+        <div class="calculator-inputs">
+            <h2>Basic LED resistor calculator</h2>
+            <div class="row four">
             <div>
                 <label for="basicSupplyVoltage">Supply voltage (V)</label>
                 <input type="number" id="basicSupplyVoltage" value="12" step="0.1" min="0">
@@ -300,16 +346,18 @@
                 </select>
                 <div class="help">Suggested resistor wattage safety margin.</div>
             </div>
+            </div>
+        </div>
+
+        <div class="calculator-results results-section" id="basicResultsPanel">
+            <!-- Basic results render here -->
         </div>
     </div>
 
-    <div class="panel results-section" id="basicResultsPanel">
-        <!-- Basic results render here -->
-    </div>
-
-    <div class="panel">
-        <h2>Voltage fluctuation current calculator</h2>
-        <div class="row four">
+    <div class="panel calculator-card">
+        <div class="calculator-inputs">
+            <h2>Voltage fluctuation current calculator</h2>
+            <div class="row four">
             <div>
                 <label for="fluctNominalVoltage">Nominal supply voltage (V)</label>
                 <input type="number" id="fluctNominalVoltage" value="12" step="0.1" min="0">
@@ -330,9 +378,9 @@
                 <input type="number" id="fluctLedVoltage" value="2" step="0.01" min="0">
                 <div class="help">Typical LED voltage.</div>
             </div>
-        </div>
+            </div>
 
-        <div class="row two">
+            <div class="row two">
             <div>
                 <label for="fluctTargetCurrent">Target current at nominal voltage (mA)</label>
                 <input type="number" id="fluctTargetCurrent" value="20" step="0.1" min="0">
@@ -348,16 +396,18 @@
                 </select>
                 <div class="help">Suggested wattage based on worst-case resistor power.</div>
             </div>
+            </div>
+        </div>
+
+        <div class="calculator-results results-section" id="fluctResultsPanel">
+            <!-- Fluctuation results render here -->
         </div>
     </div>
 
-    <div class="panel results-section" id="fluctResultsPanel">
-        <!-- Fluctuation results render here -->
-    </div>
-
-    <div class="panel">
-        <h2>Known resistor voltage fluctuation calculator</h2>
-        <div class="row four">
+    <div class="panel calculator-card">
+        <div class="calculator-inputs">
+            <h2>Known resistor voltage fluctuation calculator</h2>
+            <div class="row four">
             <div>
                 <label for="knownNominalVoltage">Nominal supply voltage (V)</label>
                 <input type="number" id="knownNominalVoltage" value="12" step="0.1" min="0">
@@ -378,9 +428,9 @@
                 <input type="number" id="knownLedVoltage" value="2" step="0.01" min="0">
                 <div class="help">Typical LED voltage drop.</div>
             </div>
-        </div>
+            </div>
 
-        <div class="row two">
+            <div class="row two">
             <div>
                 <label for="knownResistorValue">Resistor value (Ω)</label>
                 <input type="number" id="knownResistorValue" value="470" step="0.1" min="0">
@@ -396,11 +446,12 @@
                 </select>
                 <div class="help">Suggested wattage based on worst-case resistor power.</div>
             </div>
+            </div>
         </div>
-    </div>
 
-    <div class="panel results-section" id="knownResultsPanel">
-        <!-- Known resistor results render here -->
+        <div class="calculator-results results-section" id="knownResultsPanel">
+            <!-- Known resistor results render here -->
+        </div>
     </div>
 
     <div class="footer-note">Formula: R = (Vs − Vf) / I. Resistor power: P = I²R = (Vs − Vf) × I.</div>
