@@ -204,6 +204,27 @@
         font-size: 0.95rem;
     }
 
+    .copy-value {
+        display: inline-block;
+        cursor: pointer;
+        color: var(--accent);
+        border-bottom: 1px dashed var(--accent);
+    }
+
+    .copy-value:hover {
+        color: #1d4ed8;
+        border-bottom-style: solid;
+    }
+
+    .copy-hint {
+        display: inline-block;
+        margin-left: 8px;
+        color: var(--muted);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 0.8rem;
+        font-weight: 400;
+    }
+
     .footer-note {
         margin-top: 24px;
         font-size: 0.8rem;
@@ -224,12 +245,14 @@
     <div class="panel calculator-card">
         <div class="calculator-inputs">
             <h2>Scale one part to match another</h2>
+
             <div class="row">
                 <div>
                     <label for="currentLength">Length on part to scale</label>
                     <input type="number" id="currentLength" value="50" step="0.001" min="0">
                     <div class="help">The measured length on the part you want to resize.</div>
                 </div>
+
                 <div>
                     <label for="targetLength">Length it should become</label>
                     <input type="number" id="targetLength" value="75" step="0.001" min="0">
@@ -253,7 +276,50 @@
 
     function formatNumber(value, decimals = 6) {
         if (!isFinite(value)) return '—';
-        return value.toFixed(decimals).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+
+        return value
+            .toFixed(decimals)
+            .replace(/\.0+$/, '')
+            .replace(/(\.\d*?)0+$/, '$1');
+    }
+
+    function copyScaleFactor(value) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(value).then(() => {
+                showCopyMessage('Copied');
+            }).catch(() => {
+                fallbackCopy(value);
+            });
+        } else {
+            fallbackCopy(value);
+        }
+    }
+
+    function fallbackCopy(value) {
+        const tempInput = document.createElement('input');
+        tempInput.value = value;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+
+        try {
+            document.execCommand('copy');
+            showCopyMessage('Copied');
+        } catch (err) {
+            showCopyMessage('Copy failed');
+        }
+
+        document.body.removeChild(tempInput);
+    }
+
+    function showCopyMessage(message) {
+        const hint = document.getElementById('copyHint');
+        if (!hint) return;
+
+        hint.textContent = message;
+
+        setTimeout(() => {
+            hint.textContent = 'click to copy';
+        }, 1200);
     }
 
     function renderResults() {
@@ -277,6 +343,7 @@
         }
 
         const scaleFactor = targetLength / currentLength;
+        const scaleFactorText = formatNumber(scaleFactor, 8);
         const percentage = scaleFactor * 100;
         const changePercent = (scaleFactor - 1) * 100;
 
@@ -286,22 +353,34 @@
 
         panel.innerHTML = `
             <div class="group-header">Scale result</div>
+
             <div class="summary-grid">
                 <div class="summary-card best">
                     <div class="summary-label">DraftSight scale factor</div>
-                    <div class="summary-value">${formatNumber(scaleFactor, 8)}</div>
+                    <div class="summary-value">
+                        <span class="copy-value" onclick="copyScaleFactor('${scaleFactorText}')" title="Click to copy">${scaleFactorText}</span>
+                        <span class="copy-hint" id="copyHint">click to copy</span>
+                    </div>
                 </div>
+
                 <div class="summary-card">
                     <div class="summary-label">Scale percentage</div>
                     <div class="summary-value">${formatNumber(percentage, 4)}%</div>
                 </div>
+
                 <div class="summary-card">
                     <div class="summary-label">Direction</div>
                     <div class="summary-value">${direction}</div>
                 </div>
             </div>
+
             <div class="note">Size change from the original is ${changePercent >= 0 ? '+' : ''}${formatNumber(changePercent, 4)}%.</div>
-            <div class="command-box">DraftSight SCALE value: ${formatNumber(scaleFactor, 8)}</div>
+
+            <div class="command-box">
+                DraftSight SCALE value:
+                <span class="copy-value" onclick="copyScaleFactor('${scaleFactorText}')" title="Click to copy">${scaleFactorText}</span>
+            </div>
+
             <div class="note">In DraftSight, use the SCALE command, choose the objects, choose a base point, then enter this scale factor.</div>
         `;
     }
