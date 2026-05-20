@@ -52,8 +52,29 @@
         padding: 20px;
         margin-bottom: 16px;
     }
+    .top-bar {
+    margin-bottom: 16px;
+}
 
-    .row {
+    .back-button {
+        display: inline-block;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .back-button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+     .row {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         gap: 16px;
@@ -189,6 +210,10 @@
 </head>
 <body>
 <div class="container">
+    <div class="top-bar">
+        <a class="back-button" href="index.html">← Back to Tools</a>
+    </div>
+
     <h1>mm to Fractional Inches</h1>
     <p class="subtitle">Find imperial fractional sizes that match a given millimetre value within tolerance.</p>
 
