@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spacer &amp; Bolt Calculator · CALSIS 160</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --border: #d8dde3;
+      --text: #1a1f2b;
+      --muted: #5a6470;
+      --accent: #2563eb;
+      --accent-soft: #e8f0fe;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #ffffff;
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .top-bar { margin-bottom: 16px; }
+
+    .back-button {
+      display: inline-block;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .back-button:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    .page-header { margin-bottom: 24px; }
+    .site-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    h1 { font-size: 1.6rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 0.95rem; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 1.3rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #f8fafc;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    /* Result cards */
+    .result-card {
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      transition: all 0.25s;
+    }
+    .result-card.success { background: #f0fdf4; border-color: #86efac; }
+    .result-card.error   { background: #fef2f2; border-color: #fca5a5; }
+    .result-card.info    { background: #eff6ff; border-color: #93c5fd; }
+
+    .result-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #94a3b8;
+    }
+    .result-card.success .result-label { color: #16a34a; }
+    .result-card.error   .result-label { color: #ef4444; }
+    .result-card.info    .result-label { color: #2563eb; }
+
+    .result-value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.02em;
+    }
+    .result-card.success .result-value { color: #15803d; }
+    .result-card.error   .result-value { color: #dc2626; }
+    .result-card.info    .result-value { color: #1d4ed8; }
+
+    .result-note {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #ef4444;
+    }
+
+    /* Bolt range pill */
+    .bolt-range {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: #dbeafe;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .bolt-range-title {
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #3b82f6;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .bolt-range-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bolt-range-end { text-align: center; }
+    .bolt-range-end .bolt-name { color: #1e40af; font-weight: 700; }
+    .bolt-range-end .bolt-eng  { font-size: 0.75rem; color: #3b82f6; margin-top: 2px; }
+    .bolt-range-arrow { color: #93c5fd; font-size: 1.1rem; }
+
+    /* Breakdown rows */
+    .breakdown { margin-top: 14px; }
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.85rem;
+    }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-row .bl { color: var(--muted); }
+    .breakdown-row .bv { font-weight: 600; color: var(--text); font-family: ui-monospace, Menlo, monospace; }
+    .breakdown-row .bv.muted { font-weight: 400; color: #94a3b8; }
+
+    /* Spacer combination table */
+    .combo-header {
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .combo-target {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      font-family: ui-monospace, Menlo, monospace;
+      margin-bottom: 4px;
+    }
+    .combo-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th {
+      text-align: left;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    td:last-child { text-align: right; font-weight: 600; }
+    td:nth-child(3) { text-align: center; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    tr.combo-row-used td:first-child { border-left: 3px solid #4caf50; }
+    tr.combo-row-used td { background: #f0fdf4; }
+
+    .empty-state {
+      color: var(--muted);
+      font-style: italic;
+      font-size: 0.9rem;
+    }
+
+    .footer-note {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="top-bar">
+    <a class="back-button" href="https://tvctech.github.io/tools/index.html">← Back to Tools</a>
+  </div>
+
+  <div class="page-header">
+    <div class="site-label">CALSIS 160</div>
+    <h1>Spacer &amp; Bolt Calculator</h1>
+    <p class="subtitle">Enter the pipe internal diameter to calculate spacer size, bolt length, and spacer stack.</p>
+  </div>
+
+  <div class="panel">
+    <label for="pipeDia">Pipe Internal Diameter D (mm)</label>
+    <input type="number" id="pipeDia" placeholder="e.g. 467" min="0" step="0.1" />
+  </div>
+
+  <!-- Spacer size result -->
+  <div class="result-card" id="spacerCard">
+    <div class="result-label">Spacer Size S</div>
+    <div class="result-value" id="spacerValue">—</div>
+    <div class="result-note" id="spacerNote" style="display:none;"></div>
+  </div>
+
+  <!-- Spacer combination -->
+  <div class="panel" id="comboPanel" style="display:none;">
+    <div class="combo-header">Spacer Stack Breakdown</div>
+    <div class="combo-target" id="comboTarget"></div>
+    <div class="combo-note" id="comboNote"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Spacer Size</th>
+          <th>Qty (1 wheel)</th>
+          <th style="text-align:center;">Qty (6 wheels)</th>
+          <th style="text-align:right;">Qty (9 wheels)</th>
+        </tr>
+      </thead>
+      <tbody id="comboBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Bolt result -->
+  <div class="result-card" id="boltCard">
+    <div class="result-label">M8 Bolt Length</div>
+    <div class="result-value" id="boltValue">—</div>
+    <div id="boltRange" style="display:none;"></div>
+    <div class="result-note" id="boltNote" style="display:none;"></div>
+    <div class="breakdown" id="boltBreakdown" style="display:none;"></div>
+  </div>
+
+  <div class="footer-note">S = D/2 − 81.15 &nbsp;·&nbsp; Spacer sizes: 40, 20, 10, 5, 3, 1 mm</div>
+
+</div>
+
+<script>
+  const OFFSET         = 81.15;
+  const WHEEL_STACK    = 7.5;
+  const THREAD_DEPTH   = 16;
+  const MIN_ENGAGEMENT = 5;
+  const BOLT_STEP      = 5;
+  const SPACER_SIZES   = [40, 20, 10, 5, 3, 1];
+
+  function roundUp(v, s)   { return Math.ceil(v / s) * s; }
+  function roundDown(v, s) { return Math.floor(v / s) * s; }
+
+  function getSpacerStack(targetMm) {
+    const rounded = Math.round(targetMm);
+    let remaining = rounded;
+    const combo = [];
+    for (const size of SPACER_SIZES) {
+      if (remaining >= size) {
+        const count = Math.floor(remaining / size);
+        combo.push({ size, count });
+        remaining -= count * size;
+      }
+    }
+    return { combo, rounded, decimal: targetMm - rounded };
+  }
+
+  function bv(text, muted = false) {
+    return `<div class="breakdown-row"><span class="bl">${text.label}</span><span class="bv${muted ? ' muted' : ''}">${text.value}</span></div>`;
+  }
+
+  function calculate() {
+    const D = parseFloat(document.getElementById('pipeDia').value);
+
+    const spacerCard  = document.getElementById('spacerCard');
+    const spacerValue = document.getElementById('spacerValue');
+    const spacerNote  = document.getElementById('spacerNote');
+    const comboPanel  = document.getElementById('comboPanel');
+    const comboTarget = document.getElementById('comboTarget');
+    const comboNote   = document.getElementById('comboNote');
+    const comboBody   = document.getElementById('comboBody');
+    const boltCard    = document.getElementById('boltCard');
+    const boltValue   = document.getElementById('boltValue');
+    const boltRange   = document.getElementById('boltRange');
+    const boltNote    = document.getElementById('boltNote');
+    const boltBreak   = document.getElementById('boltBreakdown');
+
+    // Reset
+    spacerCard.className  = 'result-card';
+    boltCard.className    = 'result-card';
+    spacerNote.style.display = 'none';
+    boltNote.style.display   = 'none';
+    boltRange.style.display  = 'none';
+    boltBreak.style.display  = 'none';
+    comboPanel.style.display = 'none';
+
+    if (isNaN(D) || D <= 0) {
+      spacerValue.textContent = '—';
+      boltValue.textContent   = '—';
+      return;
+    }
+
+    const S = D / 2 - OFFSET;
+
+    if (S <= 0) {
+      spacerCard.className = 'result-card error';
+      spacerValue.textContent = S.toFixed(2) + ' mm';
+      spacerNote.textContent  = '⚠ Negative — pipe too small for this wheel stack';
+      spacerNote.style.display = 'block';
+      boltValue.textContent = '—';
+      return;
+    }
+
+    // Spacer result
+    spacerCard.className    = 'result-card success';
+    spacerValue.textContent = S.toFixed(2) + ' mm';
+
+    // Spacer stack breakdown
+    const { combo, rounded, decimal } = getSpacerStack(S);
+    comboPanel.style.display = 'block';
+    comboTarget.textContent  = rounded + ' mm target';
+    if (Math.abs(decimal) >= 0.01) {
+      comboNote.textContent = `(${S.toFixed(2)} mm rounded — ${Math.abs(decimal).toFixed(2)} mm remainder ignored)`;
+    } else {
+      comboNote.textContent = '';
+    }
+
+    comboBody.innerHTML = combo.map(({ size, count }) => `
+      <tr class="combo-row-used">
+        <td><strong>${size} mm</strong></td>
+        <td>${count}</td>
+        <td style="text-align:center;">${count * 6}</td>
+        <td>${count * 9}</td>
+      </tr>
+    `).join('');
+
+    // Bolt calculation
+    const clearance  = WHEEL_STACK + S;
+    const minBolt    = roundUp(clearance + MIN_ENGAGEMENT, BOLT_STEP);
+    const maxBolt    = roundDown(clearance + THREAD_DEPTH, BOLT_STEP);
+    const noFit      = minBolt > maxBolt;
+    const recommended = noFit ? null : maxBolt;
+
+    if (noFit) {
+      boltCard.className    = 'result-card error';
+      boltValue.textContent = 'No fit';
+      boltNote.textContent  = `⚠ Smallest bolt with ≥${MIN_ENGAGEMENT} mm engagement (${minBolt} mm) would bottom out in the ${THREAD_DEPTH} mm thread.`;
+      boltNote.style.display = 'block';
+    } else {
+      const recEng = recommended - clearance;
+      const minEng = minBolt - clearance;
+
+      boltCard.className    = 'result-card info';
+      boltValue.textContent = `M8 × ${recommended}`;
+
+      boltRange.style.display = 'block';
+      boltRange.innerHTML = `
+        <div class="bolt-range">
+          <div class="bolt-range-title">Valid bolt range — thread engagement</div>
+          <div class="bolt-range-row">
+            <div class="bolt-range-end">
+              <div class="bolt-name">M8 × ${minBolt}</div>
+              <div class="bolt-eng">${minEng.toFixed(1)} mm engagement</div>
+            </div>
+            <div class="bolt-range-arrow">→</div>
+            <div class="bolt-range-end">
+              <div class="bolt-name">M8 × ${maxBolt}</div>
+              <div class="bolt-eng">${recEng.toFixed(1)} mm engagement</div>
+            </div>
+          </div>
+        </div>`;
+
+      boltBreak.style.display = 'block';
+      boltBreak.innerHTML =
+        bv({ label: 'Wheel + washers',      value: WHEEL_STACK + ' mm' }) +
+        bv({ label: 'Spacer',               value: S.toFixed(2) + ' mm' }) +
+        bv({ label: 'Clearance total',      value: clearance.toFixed(2) + ' mm' }) +
+        bv({ label: 'Max thread engagement', value: recEng.toFixed(2) + ' mm' });
+    }
+  }
+
+  document.getElementById('pipeDia').addEventListener('input', calculate);
+</script>
+</body>
+</html>
