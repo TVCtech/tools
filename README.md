@@ -3,6 +3,42 @@
 The existing calculators remain public. `index.html` links to each calculator
 and has a **Login** link at the top left.
 
+## CALSIS wheel and spacer assembly
+
+`Calsis160WheelSpacerCalc.html` includes a live SVG side view using the owner's
+wheel/bracket and thread captures. The drawing updates with the actual selected
+spacers and recommended bolt. A hidden-bolt-path checkbox makes the covering
+parts translucent; it does not change the calculation. The 40 mm example sets
+pipe ID to 242.3 mm. Bolt engagement uses the rounded fitted stack, with the
+existing 7.5 mm bracket/washer allowance, 5 mm minimum and owner-selected 20 mm
+maximum. Bolt sizes remain 5 mm increments. These limits are calculation inputs,
+not an independent verification of the hardware's thread strength or clearance.
+
+Supplied drawing dimensions: bracket width 63 mm, assembly height 31.9 mm,
+wheel diameter 29.8 mm, rectangular spacer width 63.5 mm. Individual spacer
+heights and exposed thread length share one physical scale. The bolt image is
+registered under the left socket head; its 8 mm-wide/20 mm-long thread texture
+is repeated and clipped, so changing bolt length does not stretch the pitch.
+For more than 80 blocks, the drawing shows a combined stack and retains the
+quantities instead of creating an unbounded number of SVG elements.
+
+`assets/calsis-wheel/` contains cropped/downsampled browser copies and dimension
+references. `reference-images.zip` preserves the original upload, including
+both future 90 mm spacer images. The 90 mm spacer is **not** an available
+calculator size; it remains a reference. No generation or redrawing was applied
+to the wheel/thread captures. Keep the assets folder alongside the HTML when
+using it offline.
+
+Focused browser checks (Playwright and Chromium, as below):
+
+```sh
+python3 -m unittest discover -s tests -p test_wheel_spacer_browser.py -v
+```
+
+They check actual-stack rounding, image loading, per-block dimensions, bolt
+origin/length and exposed engagement, path visibility, invalid-input clearing,
+mobile and print layout, and retention of the future spacer upload.
+
 ## Stock Cut plan
 
 `stock_cut_plan.html` is a public, self-contained HTML/CSS/JavaScript calculator.
