@@ -258,18 +258,18 @@
     .assembly-note { font-size: .85rem; color: var(--muted); }
     .assembly-scroll { overflow-x: auto; }
     #assemblySvg { display: block; width: 100%; }
-    #assemblySvg text { font-family: inherit; fill: #334155; font-size: 12px; }
+    #assemblySvg text { font-family: inherit; fill: #334155; font-size: 14px; }
     #assemblySvg .dimension { fill: none; stroke: #64748b; stroke-width: 1; }
     #assemblySvg .engagement { stroke: #2563eb; }
     #assemblySvg .engagement-label { fill: #1d4ed8; }
     #assemblySvg .spacer { stroke: #626978; stroke-width: .8; }
-    #assemblySvg .spacer-label { font-size: 11px; }
+    #assemblySvg .spacer-label { font-size: 13px; }
     .assembly-key { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; font-size: .8rem; }
     .assembly-key span { background: #f1f5f9; padding: 3px 8px; border-radius: 4px; }
     @media (max-width: 480px) {
       .kit-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      #assemblySvg text { font-size: 14px; }
-      #assemblySvg .spacer-label { font-size: 13px; }
+      #assemblySvg text { font-size: 16px; }
+      #assemblySvg .spacer-label { font-size: 15px; }
     }
     @media print {
       .top-bar { display: none; }
@@ -451,7 +451,7 @@
         const { size, count } = item;
         for (let i = 0; i < count; i++) {
           const height = size * scale, centre = cursor + height / 2;
-          const labelY = Math.max(centre, previousLabel + 14);
+          const labelY = Math.max(centre, previousLabel + 18);
           blocks += item.type === 'tee'
             ? teeDrawing(item, x - .25 * scale, cursor, 63.5 * scale, height)
             : `<rect class="spacer" data-mm="${size}" x="${x - .25 * scale}" y="${cursor}" width="${63.5 * scale}" height="${height}" fill="url(#spacerMetal)"/>`;
@@ -494,7 +494,7 @@
       <path class="dimension engagement" d="M ${engagementOrigin} ${threadEntry} H ${engagementX - 4} M ${engagementOrigin} ${boltEnd} H ${engagementX - 4}"/>
       ${dimension(engagementX, threadEntry, boltEnd, 'engagement')}
       <text class="engagement-label" text-anchor="end" x="${engagementLabelX}" y="${engagementLabelY}">${fmt(engagement)} mm</text>
-      <text class="engagement-label" text-anchor="end" x="${engagementLabelX}" y="${engagementLabelY + 15}">${teeHeight ? 'in T spacer' : 'engagement'}</text>`;
+      <text class="engagement-label" text-anchor="end" x="${engagementLabelX}" y="${engagementLabelY + 19}">${teeHeight ? 'in T spacer' : 'engagement'}</text>`;
     document.getElementById('assemblySummary').textContent = `${stack} mm actual stack · M8 × ${bolt} · ${fmt(engagement)} mm engagement`;
     document.getElementById('assemblyKey').innerHTML = combo.length
       ? combo.map(item => `<span>${item.count} × ${spacerName(item)}</span>`).join('')
