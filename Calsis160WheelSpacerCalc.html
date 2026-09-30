@@ -366,9 +366,9 @@
     // Spacer stack breakdown
     const { combo, rounded, decimal } = getSpacerStack(S);
     comboPanel.style.display = 'block';
-    comboTarget.textContent  = rounded + ' mm target';
+    comboTarget.textContent  = rounded + ' mm actual stack';
     if (Math.abs(decimal) >= 0.01) {
-      comboNote.textContent = `(${S.toFixed(2)} mm rounded — ${Math.abs(decimal).toFixed(2)} mm remainder ignored)`;
+      comboNote.textContent = `Calculated: ${S.toFixed(2)} mm — actual stack is ${Math.abs(decimal).toFixed(2)} mm ${decimal > 0 ? 'thinner' : 'thicker'}`;
     } else {
       comboNote.textContent = '';
     }
@@ -383,7 +383,7 @@
     `).join('');
 
     // Bolt calculation
-    const clearance  = WHEEL_STACK + S;
+    const clearance  = WHEEL_STACK + rounded;
     const minBolt    = roundUp(clearance + MIN_ENGAGEMENT, BOLT_STEP);
     const maxBolt    = roundDown(clearance + THREAD_DEPTH, BOLT_STEP);
     const noFit      = minBolt > maxBolt;
@@ -421,7 +421,7 @@
       boltBreak.style.display = 'block';
       boltBreak.innerHTML =
         bv({ label: 'Wheel + washers',      value: WHEEL_STACK + ' mm' }) +
-        bv({ label: 'Spacer',               value: S.toFixed(2) + ' mm' }) +
+        bv({ label: 'Actual spacer stack',   value: rounded + ' mm' }) +
         bv({ label: 'Clearance total',      value: clearance.toFixed(2) + ' mm' }) +
         bv({ label: 'Max thread engagement', value: recEng.toFixed(2) + ' mm' });
     }
