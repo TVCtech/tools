@@ -3,6 +3,43 @@
 The existing calculators remain public. `index.html` links to each calculator
 and has a **Login** link at the top left.
 
+## Stock Cut plan
+
+`stock_cut_plan.html` is a public, self-contained HTML/CSS/JavaScript calculator.
+It runs offline too, without libraries or uploads. It plans up to 2,000 pieces
+from one stock length with start/end trims and saw kerf. All calculations use
+integer thousandths of a millimetre; finer inputs are rejected, not rounded.
+
+Bare cut-list pairs mean **length × quantity**: `400 x 2` is two 400 mm pieces.
+Quantity-first entries need an explicit unit: `2 x 400mm`. This fixes the
+original Python parser's ambiguous interpretation of `400 x 2`. Units mm, cm
+and m can be mixed in the list; the separate settings fields are in mm.
+
+The accepted default reserves a full kerf after each piece, except when the
+last piece finishes exactly at the usable stock end. Trims are total removed
+lengths, including trim-cut kerf. An explicit between-pieces-only option is
+also available. Offcuts, kerf loss and trim loss are reported separately;
+diagrams account for every part of each purchased length.
+
+The planner compares first-fit and best-fit decreasing. For at most 24 pieces
+it also tries a bounded search (20,000 nodes). It claims a minimum stock count
+only when the plan reaches a valid lower bound or the search completes. Other
+results explicitly remain heuristic; minimum stock count does not mean the
+best possible distribution of reusable offcuts. Identical cutting patterns
+are grouped. Edited/cleared inputs invalidate both the displayed plan and its
+exports. Reports can be copied, downloaded as text, or printed with diagrams.
+
+Focused checks:
+
+```sh
+node tests/stock-cut-plan.test.cjs
+python3 -m unittest discover -s tests -p test_stock_cut_browser.py -v
+```
+
+The browser check requires Playwright and Chromium, as described below. It
+also checks the standalone file, mobile layout, scaled segments and report
+exports. Algorithm checks include an independent exhaustive small-case oracle.
+
 ## User access
 
 `users.html` opens the login form directly, with a **Technician** / **Admin** dropdown and a **Show/Hide password** button. The old `staff.html` bookmark redirects here. Each role unlocks a separate

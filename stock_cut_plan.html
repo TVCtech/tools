@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Cut plan</title>
+<style>
+  :root { --bg:#f7f8fa; --panel:#fff; --border:#d8dde3; --text:#1a1f2b; --muted:#5a6470; --accent:#2563eb; --accent-soft:#e8f0fe; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+  .container { max-width:1050px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:0 0 4px; }
+  h2 { font-size:1.15rem; margin:0 0 12px; }
+  .subtitle { color:var(--muted); font-size:.95rem; margin:0 0 24px; }
+  .top-bar { margin-bottom:16px; }
+  .back { display:inline-block; padding:8px 12px; background:white; border:1px solid var(--border); border-radius:6px; text-decoration:none; color:var(--accent); font-size:.9rem; font-weight:600; }
+  .panel { background:white; border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:16px; }
+  .fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:16px; }
+  label { display:block; font-size:.85rem; font-weight:600; margin-bottom:5px; }
+  input,select,textarea { width:100%; padding:9px 10px; font:inherit; color:var(--text); background:white; border:1px solid var(--border); border-radius:6px; }
+  textarea { min-height:115px; resize:vertical; }
+  select { max-width:480px; }
+  .help { margin:6px 0 16px; font-size:.83rem; color:var(--muted); }
+  .help:last-child { margin-bottom:0; }
+  button { cursor:pointer; font:inherit; font-size:.9rem; font-weight:600; padding:9px 14px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:white; }
+  button.primary { color:white; background:var(--accent); border-color:var(--accent); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  :focus-visible { outline:3px solid #93b5ff; outline-offset:3px; }
+  .buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+  #error { color:#a32626; margin:12px 0 0; }
+  #status { color:var(--muted); margin:12px 0 0; font-size:.9rem; }
+  [hidden] { display:none !important; }
+  .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+  .stat { border:1px solid var(--border); border-radius:8px; background:white; padding:16px; }
+  .stat:first-child { background:var(--accent-soft); border-color:#b9cdf7; }
+  .stat:first-child strong { color:var(--accent); }
+  .stat span { color:var(--muted); font-size:.83rem; }
+  .stat strong { display:block; font-size:1.65rem; margin:4px 0; overflow-wrap:anywhere; }
+  .plan-header { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; }
+  .plan-header h2 { margin:0; }
+  #quality { margin:12px 0 4px; font-size:.9rem; }
+  #settings-summary, #loss-summary { color:var(--muted); font-size:.86rem; margin:6px 0; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:.8rem; color:var(--muted); margin-top:16px; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .swatch { width:14px; height:14px; border:1px solid #9aa6b5; display:inline-block; }
+  .piece { background:#bfdbfe; }
+  .kerf { background:#c43a38; }
+  .trim { background:repeating-linear-gradient(45deg,#fce2b2,#fce2b2 4px,#ddb66e 4px,#ddb66e 6px); }
+  .offcut { background:repeating-linear-gradient(135deg,#eef0f3,#eef0f3 5px,#dbe0e6 5px,#dbe0e6 7px); }
+  .bar-card { background:white; border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin-bottom:12px; break-inside:avoid; }
+  .bar-heading { display:flex; gap:12px; justify-content:space-between; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
+  .bar-heading h3 { margin:0; font-size:1rem; }
+  .bar-heading span { color:var(--muted); font-size:.83rem; }
+  .cut-sequence { margin:8px 0; overflow-wrap:anywhere; font-size:.92rem; }
+  .diagram { display:flex; height:44px; overflow:hidden; border:1px solid #8793a3; border-radius:4px; }
+  .segment { flex:0 0 auto; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:.75rem; white-space:nowrap; }
+  .segment.piece { box-shadow:inset -1px 0 rgba(0,0,0,.12); }
+  .bar-detail { color:var(--muted); font-size:.82rem; margin:8px 0 0; }
+  details summary { cursor:pointer; font-weight:600; }
+  .table-wrap { overflow:auto; margin-top:12px; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { padding:9px 12px; text-align:right; border-bottom:1px solid var(--border); }
+  th:first-child,td:first-child { text-align:left; }
+  th { background:#f7f8fa; color:var(--muted); font-size:.85rem; }
+  @media(max-width:700px) { .fields,.summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .panel,.bar-card { padding:16px; } }
+  @media(max-width:380px) { .fields { grid-template-columns:1fr; } }
+  @media print {
+    body { padding:0; background:white; font-size:10pt; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    .top-bar, #input-panel, .export-buttons, #status, #report-fallback { display:none !important; }
+    .container { max-width:none; }
+    .summary { grid-template-columns:repeat(4,1fr); }
+    .panel,.bar-card,.stat { break-inside:avoid; }
+    .subtitle { margin-bottom:12px; }
+  }
+</style>
+</head>
+<body>
+<main class="container">
+  <nav class="top-bar"><a class="back" href="index.html">← All tools</a></nav>
+  <h1>Stock Cut plan</h1>
+  <p class="subtitle">Plan cuts from equal-length stock, allowing for saw kerf, end trims and offcuts.</p>
+  <form id="input-panel" class="panel" novalidate>
+    <div class="fields">
+      <div><label for="stock">Stock length (mm)</label><input id="stock" type="number" min="0.001" step="any" value="2000" required></div>
+      <div><label for="kerf">Saw kerf (mm)</label><input id="kerf" type="number" min="0" step="any" value="2" required></div>
+      <div><label for="trim-start">Start trim (mm)</label><input id="trim-start" type="number" min="0" step="any" value="0" required></div>
+      <div><label for="trim-end">End trim (mm)</label><input id="trim-end" type="number" min="0" step="any" value="0" required></div>
+    </div>
+    <label for="kerf-mode">Kerf allowance</label>
+    <select id="kerf-mode">
+      <option value="each">After each piece, except an exact finish at the stock end</option>
+      <option value="between">Between pieces only</option>
+    </select>
+    <p class="help" id="kerf-help">Allows for separating the last piece from its offcut. Trims are total removed lengths, including any trim-cut kerf.</p>
+    <label for="cut-list">Cut list</label>
+    <textarea id="cut-list" spellcheck="false" aria-describedby="cut-help" required>600, 600, 800, 400 x 2
+1.2m x 2</textarea>
+    <p class="help" id="cut-help">One entry per line, or separated by commas. No unit means mm. Use <strong>400 x 2</strong> for two 400 mm pieces, or <strong>2 x 400mm</strong> with quantity first. Also accepts cm, m and ×. Decimal precision: 0.001 mm. Up to 2,000 pieces.</p>
+    <div class="buttons"><button class="primary" type="submit">Plan cuts</button><button id="example" type="button">Load example</button><button id="clear" type="button">Clear cut list</button></div>
+    <p id="error" role="alert" hidden></p>
+  </form>
+  <p id="status" role="status" aria-live="polite"></p>
+  <div id="results" hidden>
+    <section class="summary" aria-label="Plan totals">
+      <div class="stat"><span>Stock lengths needed</span><strong id="bar-count"></strong><span id="stock-size"></span></div>
+      <div class="stat"><span>Pieces to cut</span><strong id="piece-count"></strong><span id="finished-length"></span></div>
+      <div class="stat"><span>Material in finished pieces</span><strong id="utilisation"></strong><span>Of all purchased stock</span></div>
+      <div class="stat"><span>Total offcuts</span><strong id="offcuts"></strong><span>Excludes kerf and trims</span></div>
+    </section>
+    <section class="panel">
+      <div class="plan-header"><h2>Cutting plan</h2><div class="buttons export-buttons"><button id="copy" type="button">Copy report</button><button id="download" type="button">Download report</button><button id="print" type="button">Print plan</button></div></div>
+      <p id="quality"></p><p id="settings-summary"></p><p id="loss-summary"></p>
+      <div class="legend"><span><i class="swatch piece"></i>Finished piece</span><span><i class="swatch kerf"></i>Saw kerf</span><span><i class="swatch trim"></i>Trim</span><span><i class="swatch offcut"></i>Offcut</span></div>
+      <p class="help">Diagrams are to scale; very small kerfs may be hard to see. Dimensions and allowances are listed for every stock length.</p>
+    </section>
+    <section id="bars" aria-label="Stock cutting diagrams"></section>
+    <details class="panel"><summary>Required pieces</summary><div class="table-wrap"><table><thead><tr><th scope="col">Length (mm)</th><th scope="col">Quantity</th><th scope="col">Total length (mm)</th></tr></thead><tbody id="requirements"></tbody></table></div></details>
+    <section id="report-fallback" class="panel" hidden><label for="report-text">Select and copy this report</label><textarea id="report-text" readonly rows="12"></textarea></section>
+  </div>
+  <noscript><p class="panel">Enable JavaScript to calculate a plan. Everything runs in your browser; nothing is uploaded.</p></noscript>
+</main>
+<script id="planner-code">
+"use strict";
+const StockCutPlan = (() => {
+  const SCALE = 1000;
+  const MAX_PIECES = 2000;
+  const MAX_LENGTH = 1000000000; // 1,000,000 mm, expressed as thousandths of mm.
+  const numberPattern = "(?:\\d+(?:\\.\\d+)?|\\.\\d+)";
+  const lengthFirst = new RegExp("^(" + numberPattern + ")\\s*(mm|cm|m)?(?:\\s*[x×]\\s*(\\d+))?$", "i");
+  const quantityFirst = new RegExp("^(\\d+)\\s*[x×]\\s*(" + numberPattern + ")\\s*(mm|cm|m)$", "i");
+  function length(value, unit = "mm", allowZero = false) {
+    const text = String(value).trim();
+    if (text.length > 30 || !new RegExp("^" + numberPattern + "$").test(text)) throw new Error("Enter a non-negative decimal measurement, using a decimal point.");
+    const [whole, fraction = ""] = text.split(".");
+    const numerator = BigInt((whole || "0") + fraction) * BigInt({ mm:1000, cm:10000, m:1000000 }[unit.toLowerCase()]);
+    const denominator = 10n ** BigInt(fraction.length);
+    if (numerator % denominator !== 0n) throw new Error("Measurements must be in increments of 0.001 mm; values are not rounded.");
+    const result = Number(numerator / denominator);
+    if (!Number.isSafeInteger(result) || result > MAX_LENGTH || result < (allowZero ? 0 : 1)) throw new Error("Lengths must be greater than zero and no more than 1,000,000 mm.");
+    return result;
+  }
+  function parse(text) {
+    if (text.length > 100000) throw new Error("Cut list is too long. Use quantities such as 600 x 20.");
+    const tokens = text.split(/[,;\n\r]+/).map(s => s.trim()).filter(Boolean);
+    if (!tokens.length) throw new Error("Enter at least one piece in the cut list.");
+    const pieces = [];
+    for (const token of tokens) {
+      let value, unit, quantity;
+      let match = token.match(lengthFirst);
+      if (match) { value = match[1]; unit = match[2] || "mm"; quantity = match[3] || "1"; }
+      else {
+        match = token.match(quantityFirst);
+        if (!match) throw new Error('Cannot read "' + token.slice(0,80) + '". Try 600 x 2 or 2 x 600mm.');
+        quantity = match[1]; value = match[2]; unit = match[3];
+      }
+      const count = Number(quantity);
+      if (!Number.isSafeInteger(count) || count < 1 || pieces.length + count > MAX_PIECES) throw new Error("Quantities must be positive whole numbers, with at most 2,000 pieces in a plan.");
+      let size;
+      try { size = length(value, unit); } catch (error) { throw new Error('Cut "' + token.slice(0,80) + '": ' + error.message); }
+      for (let i=0; i<count; i++) pieces.push(size);
+    }
+    return pieces;
+  }
+  function settings(stock, kerf, trimStart, trimEnd, mode) {
+    const result = { stock:length(stock), kerf:length(kerf,"mm",true), trimStart:length(trimStart,"mm",true), trimEnd:length(trimEnd,"mm",true), mode };
+    result.usable = result.stock - result.trimStart - result.trimEnd;
+    if (result.usable <= 0) throw new Error("Start and end trims must leave some usable stock.");
+    if (!["each","between"].includes(mode)) throw new Error("Choose a kerf allowance.");
+    return result;
+  }
+  function metrics(sum, count, config) {
+    const between = Math.max(0,count-1);
+    const exact = sum + between * config.kerf === config.usable;
+    const kerfs = config.mode === "between" || exact ? between : count;
+    const remaining = config.usable - sum - kerfs * config.kerf;
+    return remaining < 0 ? null : { remaining, kerfs };
+  }
+  function place(bar, piece, config) {
+    const result = metrics(bar.sum + piece, bar.cuts.length + 1, config);
+    return result ? { cuts:[...bar.cuts,piece], sum:bar.sum + piece, ...result } : null;
+  }
+  function greedy(pieces, config, bestFit) {
+    const bars = [];
+    for (const piece of pieces) {
+      let chosen=-1, candidate=null;
+      for (let i=0; i<bars.length; i++) {
+        const next=place(bars[i],piece,config);
+        if (next && (!candidate || next.remaining < candidate.remaining)) { chosen=i; candidate=next; if (!bestFit) break; }
+      }
+      if (candidate) bars[chosen]=candidate;
+      else bars.push(place({cuts:[],sum:0},piece,config));
+    }
+    return bars;
+  }
+  function plan(requested, config) {
+    if (!requested.length || requested.length > MAX_PIECES) throw new Error("Enter between 1 and 2,000 pieces.");
+    const pieces=[...requested].sort((a,b)=>b-a);
+    for (const piece of pieces) {
+      if (!Number.isSafeInteger(piece) || piece <= 0 || !metrics(piece,1,config)) throw new Error("A " + mm(piece) + " mm piece will not fit the usable stock with this kerf allowance. Check the stock, trims and kerf.");
+    }
+    const total=pieces.reduce((a,b)=>a+b,0);
+    const lowerBound=Math.ceil((total + pieces.length * config.kerf) / (config.usable + config.kerf));
+    let best=greedy(pieces,config,false);
+    const alternative=greedy(pieces,config,true);
+    if (alternative.length < best.length) best=alternative;
+    let nodes=0, exhausted=false;
+    const canSearch=pieces.length <= 24 && best.length > lowerBound;
+    function search(index,bars) {
+      if (best.length === lowerBound || exhausted) return;
+      if (++nodes > 20000) { exhausted=true; return; }
+      if (index === pieces.length) { if (bars.length < best.length) best=bars.map(b=>({...b,cuts:[...b.cuts]})); return; }
+      const seen=new Set();
+      for (let i=0; i<bars.length; i++) {
+        const signature=bars[i].sum+":"+bars[i].cuts.length;
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        const next=place(bars[i],pieces[index],config);
+        if (next) { const previous=bars[i]; bars[i]=next; search(index+1,bars); bars[i]=previous; }
+        if (exhausted || best.length===lowerBound) return;
+      }
+      if (bars.length+1 < best.length) {
+        bars.push(place({cuts:[],sum:0},pieces[index],config));
+        search(index+1,bars); bars.pop();
+      }
+    }
+    if (canSearch) search(0,[]);
+    const minimum = best.length === lowerBound || (canSearch && !exhausted);
+    const groups=[];
+    const grouped=new Map();
+    for (const bar of best) {
+      const signature=bar.cuts.join(",");
+      if (grouped.has(signature)) grouped.get(signature).quantity++;
+      else { const group={...bar,quantity:1}; groups.push(group); grouped.set(signature,group); }
+    }
+    let start=1;
+    for (const group of groups) { group.first=start; start+=group.quantity; group.last=start-1; }
+    const offcuts=best.reduce((n,b)=>n+b.remaining,0);
+    const sawLoss=best.reduce((n,b)=>n+b.kerfs*config.kerf,0);
+    const trimLoss=best.length*(config.trimStart+config.trimEnd);
+    return { config, pieces, groups, count:best.length, total, offcuts, sawLoss, trimLoss, purchased:best.length*config.stock, minimum, lowerBound };
+  }
+  function mm(value) { return new Intl.NumberFormat("en-GB",{maximumFractionDigits:3,useGrouping:false}).format(value/SCALE); }
+  function sequence(cuts) {
+    const runs=[];
+    for (const cut of cuts) { const last=runs[runs.length-1]; if (last && last.value===cut) last.count++; else runs.push({value:cut,count:1}); }
+    return runs.map(r=>mm(r.value)+" mm"+(r.count>1?" × "+r.count:"")).join(" + ");
+  }
+  function groupName(group) { return group.first===group.last ? "Stock "+group.first : "Stock "+group.first+"–"+group.last+" ("+group.quantity+" identical lengths)"; }
+  function quality(result) { return result.minimum ? "Minimum stock count confirmed for these settings." : "Practical packing plan; a plan using fewer stock lengths may exist. Lower bound: "+result.lowerBound+"."; }
+  function report(result) {
+    const c=result.config;
+    const lines=["STOCK CUT PLAN","=".repeat(50),"Stock length: "+mm(c.stock)+" mm","Kerf: "+mm(c.kerf)+" mm; "+(c.mode==="each"?"after each piece, except exact stock-end finish":"between pieces only"),"Trims: start "+mm(c.trimStart)+" mm, end "+mm(c.trimEnd)+" mm (including trim-cut kerf)",quality(result),""];
+    for (const group of result.groups) {
+      lines.push(groupName(group)+": "+sequence(group.cuts));
+      lines.push("  Per stock length: "+group.kerfs+" kerf allowances ("+mm(group.kerfs*c.kerf)+" mm); offcut "+mm(group.remaining)+" mm.");
+    }
+    lines.push("","Stock lengths needed: "+result.count,"Pieces: "+result.pieces.length,"Finished length: "+mm(result.total)+" mm","Purchased length: "+mm(result.purchased)+" mm","Total offcuts: "+mm(result.offcuts)+" mm","Kerf loss: "+mm(result.sawLoss)+" mm","Trim loss: "+mm(result.trimLoss)+" mm","Material in finished pieces: "+(100*result.total/result.purchased).toFixed(1)+"%");
+    return lines.join("\n");
+  }
+  return { length, parse, settings, metrics, plan, mm, sequence, groupName, quality, report };
+})();
+globalThis.StockCutPlan=StockCutPlan;
+
+if (typeof document !== "undefined") {
+  const $=id=>document.getElementById(id);
+  const api=StockCutPlan;
+  let current=null, revision=0;
+  const palette=["#bfdbfe","#bbf7d0","#fde68a","#ddd6fe","#fecdd3","#a5f3fc"];
+  function invalidate(message="Inputs changed. Select Plan cuts to update the plan.") {
+    revision++; current=null; $("results").hidden=true; $("error").hidden=true;
+    $("bars").replaceChildren(); $("report-text").value=""; $("report-fallback").hidden=true; $("status").textContent=message;
+  }
+  function render(result) {
+    const c=result.config;
+    $("bar-count").textContent=result.count.toLocaleString("en-GB");
+    $("stock-size").textContent=api.mm(c.stock)+" mm each";
+    $("piece-count").textContent=result.pieces.length.toLocaleString("en-GB");
+    $("finished-length").textContent=api.mm(result.total)+" mm finished length";
+    $("utilisation").textContent=(100*result.total/result.purchased).toFixed(1)+"%";
+    $("offcuts").textContent=api.mm(result.offcuts)+" mm";
+    $("quality").textContent=api.quality(result);
+    $("settings-summary").textContent="Stock "+api.mm(c.stock)+" mm · Kerf "+api.mm(c.kerf)+" mm ("+(c.mode==="each"?"after each piece; none at an exact finish":"between pieces only")+") · Start trim "+api.mm(c.trimStart)+" mm · End trim "+api.mm(c.trimEnd)+" mm";
+    $("loss-summary").textContent="Saw kerf loss: "+api.mm(result.sawLoss)+" mm · Trim loss: "+api.mm(result.trimLoss)+" mm. Offcuts may be reusable; they are shown separately.";
+    const colours=new Map([...new Set(result.pieces)].map((size,index)=>[size,palette[index%palette.length]]));
+    const cards=result.groups.map(group=>{
+      const card=document.createElement("article"); card.className="bar-card";
+      const heading=document.createElement("div"); heading.className="bar-heading";
+      const title=document.createElement("h3"); title.textContent=api.groupName(group);
+      const offcut=document.createElement("span"); offcut.textContent="Offcut per length: "+api.mm(group.remaining)+" mm";
+      heading.append(title,offcut);
+      const sequence=document.createElement("p"); sequence.className="cut-sequence"; sequence.textContent=api.sequence(group.cuts);
+      const diagram=document.createElement("div"); diagram.className="diagram"; diagram.setAttribute("role","img");
+      diagram.setAttribute("aria-label",api.sequence(group.cuts)+"; "+group.kerfs+" saw kerf allowances; offcut "+api.mm(group.remaining)+" mm");
+      function segment(size,type,label) {
+        if (!size) return;
+        const cell=document.createElement("span"); cell.className="segment "+type; cell.style.width=(100*size/c.stock)+"%"; cell.title=label+": "+api.mm(size)+" mm";
+        if (type==="piece") { cell.style.background=colours.get(size); if (size/c.stock>=.055) cell.textContent=api.mm(size); }
+        diagram.append(cell);
+      }
+      segment(c.trimStart,"trim","Start trim");
+      group.cuts.forEach((size,index)=>{ segment(size,"piece","Finished piece"); if (index<group.kerfs) segment(c.kerf,"kerf","Saw kerf"); });
+      segment(group.remaining,"offcut","Offcut"); segment(c.trimEnd,"trim","End trim");
+      const detail=document.createElement("p"); detail.className="bar-detail"; detail.textContent="Per stock length: "+group.cuts.length+" pieces · "+group.kerfs+" kerf allowances ("+api.mm(group.kerfs*c.kerf)+" mm) · "+api.mm(c.trimStart+c.trimEnd)+" mm trimmed";
+      card.append(heading,sequence,diagram,detail); return card;
+    });
+    $("bars").replaceChildren(...cards);
+    const counts=new Map(); result.pieces.forEach(p=>counts.set(p,(counts.get(p)||0)+1));
+    $("requirements").replaceChildren(...[...counts].map(([size,quantity])=>{
+      const row=document.createElement("tr");
+      [api.mm(size),String(quantity),api.mm(size*quantity)].forEach(value=>{const cell=document.createElement("td");cell.textContent=value;row.append(cell);}); return row;
+    }));
+    $("results").hidden=false;
+    $("status").textContent="Plan ready: "+result.pieces.length+" pieces from "+result.count+" stock lengths.";
+  }
+  function calculate(event) {
+    if (event) event.preventDefault();
+    invalidate("");
+    try {
+      const config=api.settings($("stock").value,$("kerf").value,$("trim-start").value,$("trim-end").value,$("kerf-mode").value);
+      const result=api.plan(api.parse($("cut-list").value),config);
+      render(result); current=result;
+    } catch (error) { $("error").textContent=error.message; $("error").hidden=false; }
+  }
+  $("input-panel").addEventListener("submit",calculate);
+  $("input-panel").addEventListener("input",()=>invalidate());
+  $("kerf-mode").addEventListener("change",()=>{
+    invalidate();
+    $("kerf-help").textContent=$("kerf-mode").value==="each" ? "Allows for separating the last piece from its offcut. Trims are total removed lengths, including any trim-cut kerf." : "No kerf is reserved after the last piece. Use only when your cutting process accounts for that separation. Trims include any trim-cut kerf.";
+  });
+  $("clear").addEventListener("click",()=>{ $("cut-list").value=""; invalidate("Cut list cleared."); $("cut-list").focus(); });
+  $("example").addEventListener("click",()=>{
+    $("stock").value="2000"; $("kerf").value="2"; $("trim-start").value="0"; $("trim-end").value="0";
+    $("cut-list").value="600, 600, 800, 400 x 2\n1.2m x 2"; calculate();
+  });
+  $("copy").addEventListener("click",async()=>{
+    if (!current) return;
+    const text=api.report(current), version=revision;
+    try { await navigator.clipboard.writeText(text); if (version===revision) $("status").textContent="Report copied."; }
+    catch { if (version!==revision) return; $("report-text").value=text; $("report-fallback").hidden=false; $("report-text").focus(); $("report-text").select(); $("status").textContent="Automatic copying is unavailable. Select and copy the report below."; }
+  });
+  $("download").addEventListener("click",()=>{
+    if (!current) return;
+    const url=URL.createObjectURL(new Blob([api.report(current)],{type:"text/plain;charset=utf-8"}));
+    const link=document.createElement("a");link.href=url;link.download="stock-cut-plan.txt";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  $("print").addEventListener("click",()=>{if(current)window.print();});
+  calculate();
+}
+</script>
+</body>
+</html>
