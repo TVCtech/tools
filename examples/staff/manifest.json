@@ -1,0 +1,6 @@
+{
+  "tools": [
+    {"id": "technician-demo", "title": "Technician test page", "access": "technician", "file": "technician-demo.html"},
+    {"id": "admin-demo", "title": "Admin test page", "access": "admin", "file": "admin-demo.html"}
+  ]
+}

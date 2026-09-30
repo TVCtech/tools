@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>@@TITLE@@ · TVC Tools</title>
+  <link rel="stylesheet" href="assets/staff.css">
+  <script src="assets/staticrypt.js" defer></script>
+  <script src="assets/staff.js" defer></script>
+</head>
+<body>
+  <header><a href="staff.html">Staff login</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
+  <p id="notice" role="status"></p>
+  <main id="login-panel">
+    <h1>@@TITLE@@ login</h1>
+    <form id="login-form" class="card">
+      <label for="role">User</label>
+      <select id="role"><option value="technician">Technician</option><option value="admin">Admin</option></select>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <label class="remember"><input id="remember" type="checkbox">Remember this browser</label>
+      <button id="login-button" type="submit" class="primary" disabled>Login</button>
+      <p class="message" id="login-message" role="status" aria-live="polite">Preparing login…</p>
+    </form>
+    <noscript>Enable JavaScript to unlock these tools.</noscript>
+  </main>
+  <main id="tools-panel" hidden>
+    <h1>@@TITLE@@ tools</h1>
+    <p class="muted" id="access-label"></p>
+    <div id="tool-list"></div>
+  </main>
+  <section id="viewer" hidden aria-label="Selected tool">
+    <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
+    <iframe id="tool-frame" title="Staff tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
+  </section>
+  <script id="staff-config" type="application/json">@@CONFIG@@</script>
+</body>
+</html>

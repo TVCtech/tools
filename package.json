@@ -1,0 +1,10 @@
+{
+  "name": "tvc-browser-tools",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
+  },
+  "dependencies": {
+    "staticrypt": "3.5.4"
+  }
+}
