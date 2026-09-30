@@ -20,7 +20,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 expect(page.locator('#assemblyPanel')).to_be_hidden()
                 # Drawing example, rounding both ways, multiple thin blocks,
                 # no spacers after rounding, and a 90 mm total built from the
-                # existing sizes (the future 90 mm part is not selectable).
+                # existing sizes with the default original kit.
                 for diameter, stack, bolt, pieces in [
                     ('242.3', 40, 65, [40]),
                     ('180', 9, 35, [5, 3, 1]),
@@ -61,8 +61,8 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                         self.assertAlmostEqual(tip - bottom, engagement * scale)
                         expect(page.locator('#assemblySummary')).to_contain_text(f'{engagement:g} mm engagement')
 
-                # Both supplied PNGs must really decode, not just have an href.
-                for asset in ['wheel-bracket.png', 'thread-20mm.png']:
+                # The supplied PNGs must really decode, not just have an href.
+                for asset in ['wheel-bracket.png', 'thread-20mm.png', '90mm-t-spacer.png']:
                     loaded = page.evaluate('''async url => {
                         const im = new Image(); im.src = url; await im.decode();
                         return im.naturalWidth > 0 && im.naturalHeight > 0;
@@ -92,7 +92,82 @@ class WheelSpacerBrowserTests(unittest.TestCase):
             finally:
                 browser.close()
 
-    def test_original_reference_upload_retains_future_spacer(self):
+    def test_three_kits_shorter_t_screws_and_threshold(self):
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(executable_path='/usr/bin/chromium', headless=True)
+            try:
+                page = browser.new_page(viewport={'width': 1000, 'height': 1100})
+                errors = []
+                page.on('pageerror', lambda error: errors.append(str(error)))
+                page.goto((ROOT / 'Calsis160WheelSpacerCalc.html').as_uri())
+                # Hand-calculated examples exercise both 90 mm types, thin
+                # spacers, repeated plain 90s, and one T plus smaller blocks.
+                cases = [
+                    ('342.3', 90, 115, {'original':[40,40,10], 'plain':[90], 'tee':[90]}),
+                    ('362.3', 100, 125, {'original':[40,40,20], 'plain':[90,10], 'tee':[10,90]}),
+                    ('450.3', 144, 170, {'original':[40,40,40,20,3,1], 'plain':[90,40,10,3,1], 'tee':[40,10,3,1,90]}),
+                    ('522.3', 180, 205, {'original':[40,40,40,40,20], 'plain':[90,90], 'tee':[40,40,10,90]}),
+                ]
+                # For 180 mm: clearance 187.5, longest allowed bolt is 205.
+                for diameter, stack, full_bolt, choices in cases:
+                    page.locator('#pipeDia').fill(diameter)
+                    expect(page.locator('#kitPanel')).to_be_visible()
+                    for kit, pieces in choices.items():
+                        with self.subTest(stack=stack, kit=kit):
+                            page.locator(f'[data-kit="{kit}"]').click()
+                            bolt = full_bolt - (90 if kit == 'tee' else 0)
+                            engagement = full_bolt - stack - 7.5
+                            expect(page.locator('#boltValue')).to_have_text(f'M8 × {bolt}')
+                            expect(page.locator(f'[data-kit="{kit}"]')).to_have_attribute('aria-pressed','true')
+                            self.assertEqual(page.locator('#assemblySvg .spacer').evaluate_all(
+                                '(items) => items.map(item => Number(item.dataset.mm))'), pieces)
+                            expect(page.locator('#assemblySummary')).to_contain_text(f'{stack} mm actual stack')
+                            expect(page.locator('#assemblySummary')).to_contain_text(f'{engagement:g} mm engagement')
+                            self.assertLessEqual(engagement,20)
+                            self.assertGreaterEqual(engagement,5)
+                            if kit == 'tee':
+                                expect(page.locator('#comboBody')).to_contain_text('90 mm T')
+                                expect(page.locator('#assemblyExplanation')).to_contain_text('25 mm tapped top')
+                                geometry = page.locator('#assemblySvg').evaluate('''svg => {
+                                    const wheel=svg.querySelector('#wheelImage'),t=svg.querySelector('.t-spacer'),bolt=svg.querySelector('#boltShaft');
+                                    const attr=(el,k)=>Number(el.getAttribute(k));
+                                    return {scale:attr(wheel,'width')/63,tY:attr(t,'y'),tH:attr(t,'height'),
+                                        tip:attr(bolt,'y')+attr(bolt,'height'),entry:Number(svg.dataset.threadEntry),
+                                        bracketBottom:attr(wheel,'y')+attr(wheel,'height')};
+                                }''')
+                                self.assertAlmostEqual(geometry['tH'],90*geometry['scale'])
+                                self.assertAlmostEqual(geometry['tY'],geometry['bracketBottom']+(stack-90)*geometry['scale'])
+                                self.assertAlmostEqual(geometry['entry'],geometry['tY'])
+                                self.assertAlmostEqual(geometry['tip']-geometry['tY'],engagement*geometry['scale'])
+                                self.assertLess(geometry['tip'],geometry['tY']+25*geometry['scale'])
+                # The 90 mm choice follows the actual rounded stack. Below that
+                # threshold the original kit is used even after selecting T.
+                page.locator('#pipeDia').fill('341.1')
+                expect(page.locator('#kitPanel')).to_be_hidden()
+                expect(page.locator('#boltValue')).to_have_text('M8 × 115')
+                expect(page.locator('.t-spacer')).to_have_count(0)
+                page.locator('#pipeDia').fill('341.3')
+                expect(page.locator('#kitPanel')).to_be_visible()
+                expect(page.locator('[data-kit="tee"]')).to_have_attribute('aria-pressed','true')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 25')
+                page.locator('#pipeDia').fill('362.3')
+                page.get_by_role('button',name='Plain 90 mm Through holes').focus()
+                page.keyboard.press('Enter')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 125')
+                page.locator('[data-kit="tee"]').click()
+                for dimensions in [{'width':1000,'height':1100},{'width':390,'height':844}]:
+                    page.set_viewport_size(dimensions)
+                    self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                    page.screenshot(path=f"/tmp/wheel-kits-{dimensions['width']}.png",full_page=True)
+                for value in ['','100','1e100']:
+                    page.locator('#pipeDia').fill(value)
+                    expect(page.locator('#kitPanel')).to_be_hidden()
+                    expect(page.locator('#assemblyPanel')).to_be_hidden()
+                self.assertEqual(errors,[])
+            finally:
+                browser.close()
+
+    def test_original_reference_upload_retains_spacer_sources(self):
         with ZipFile(ROOT / 'assets/calsis-wheel/reference-images.zip') as archive:
             self.assertIn('90mm spacer.PNG', archive.namelist())
             self.assertIn('90mm spacer dimesnion .png', archive.namelist())

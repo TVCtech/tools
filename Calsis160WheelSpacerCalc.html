@@ -232,6 +232,16 @@
     }
 
     [hidden] { display: none !important; }
+    .kit-panel { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .kit-panel legend { padding: 0 6px; font-size: .95rem; font-weight: 600; }
+    .kit-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .kit-option { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 6px; border: 2px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font: inherit; cursor: pointer; }
+    .kit-option[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    .kit-option:hover { border-color: var(--accent); }
+    .kit-option:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .kit-option svg { width: 100%; height: 108px; }
+    .kit-option strong { font-size: .85rem; }
+    .kit-option span { font-size: .75rem; color: var(--muted); }
     .assembly-title { font-size: 1.05rem; margin-bottom: 4px; }
     .assembly-note { font-size: .85rem; color: var(--muted); }
     .assembly-scroll { overflow-x: auto; }
@@ -276,6 +286,24 @@
     <input type="number" id="pipeDia" placeholder="e.g. 467" min="0" step="0.1" />
   </div>
 
+  <fieldset class="kit-panel" id="kitPanel" hidden>
+    <legend>Which spacer kit do you have?</legend>
+    <div class="kit-options">
+      <button type="button" class="kit-option" data-kit="original" aria-pressed="true">
+        <svg viewBox="0 0 110 110" aria-hidden="true"><g fill="#9ba2ae" stroke="#626978"><rect x="23" y="5" width="63.5" height="40"/><rect x="23" y="45" width="63.5" height="40"/><rect x="23" y="85" width="63.5" height="10"/></g></svg>
+        <strong>Original kit</strong><span>40 mm maximum</span>
+      </button>
+      <button type="button" class="kit-option" data-kit="plain" aria-pressed="false">
+        <svg viewBox="0 0 110 110" aria-hidden="true"><rect x="23" y="5" width="63.5" height="90" fill="#9ba2ae" stroke="#626978"/></svg>
+        <strong>Plain 90 mm</strong><span>Through holes</span>
+      </button>
+      <button type="button" class="kit-option" data-kit="tee" aria-pressed="false">
+        <svg viewBox="0 0 110 110" aria-hidden="true"><image href="assets/calsis-wheel/90mm-t-spacer.png" x="23" y="5" width="63.5" height="90"/></svg>
+        <strong>90 mm T</strong><span>Shorter wheel screws</span>
+      </button>
+    </div>
+  </fieldset>
+
   <!-- Spacer size result -->
   <div class="result-card" id="spacerCard">
     <div class="result-label">Spacer Size S</div>
@@ -316,11 +344,11 @@
       <svg id="assemblySvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="assemblySvgTitle assemblySvgDesc"></svg>
     </div>
     <div class="assembly-key" id="assemblyKey"></div>
-    <p class="assembly-note">Solid blocks show the fitted spacers. The thread below the stack is the length available to engage in the mounting thread. All lengths use the actual spacer stack; bolt length is measured from under the socket head.</p>
+    <p class="assembly-note" id="assemblyExplanation">Solid blocks show the fitted spacers. Bolt length is measured from under the socket head.</p>
     <p class="assembly-reference"><a href="assets/calsis-wheel/assembly-dimensions.png" target="_blank" rel="noopener">View supplied assembly dimensions</a></p>
   </section>
 
-  <div class="footer-note">S = D/2 − 81.15 &nbsp;·&nbsp; Spacer sizes: 40, 20, 10, 5, 3, 1 mm</div>
+  <div class="footer-note" id="spacerSizes">S = D/2 − 81.15 &nbsp;·&nbsp; Spacer sizes: 40, 20, 10, 5, 3, 1 mm</div>
 
 </div>
 
@@ -331,62 +359,83 @@
   const MIN_ENGAGEMENT = 5;
   const BOLT_STEP      = 5;
   const SPACER_SIZES   = [40, 20, 10, 5, 3, 1];
+  let selectedKit = 'original';
+  const spacerName = item => `${item.size} mm${item.type === 'tee' ? ' T' : ''}`;
 
   function roundUp(v, s)   { return Math.ceil(v / s) * s; }
   function roundDown(v, s) { return Math.floor(v / s) * s; }
 
-  function getSpacerStack(targetMm) {
+  function getSpacerStack(targetMm, kit = 'original') {
     const rounded = Math.round(targetMm);
-    let remaining = rounded;
+    const effectiveKit = rounded >= 90 ? kit : 'original';
+    const teeHeight = effectiveKit === 'tee' ? 90 : 0;
+    let remaining = rounded - teeHeight;
     const combo = [];
-    for (const size of SPACER_SIZES) {
+    const sizes = effectiveKit === 'plain' ? [90, ...SPACER_SIZES] : SPACER_SIZES;
+    for (const size of sizes) {
       if (remaining >= size) {
         const count = Math.floor(remaining / size);
         combo.push({ size, count });
         remaining -= count * size;
       }
     }
-    return { combo, rounded, decimal: targetMm - rounded };
+    // One T spacer sits against the unit. Smaller through-hole spacers go above it.
+    if (teeHeight) combo.push({size: 90, count: 1, type: 'tee'});
+    return { combo, rounded, decimal: targetMm - rounded, kit: effectiveKit, teeHeight };
   }
 
-  function drawAssembly({ combo, stack, bolt, engagement }) {
+  function drawAssembly({ combo, stack, bolt, engagement, teeHeight = 0 }) {
     // Owner's dimensioned CAD: 63 mm bracket, 31.9 mm overall height,
     // 29.8 mm wheel and 63.5 mm rectangular spacer blocks. Bolt centre is
     // 9 mm from the bracket's left edge, registered to the supplied capture.
-    const scale = Math.min(4.2, 410 / (31.9 + stack + engagement));
+    const scale = Math.min(4.2, 410 / (31.9 + stack + (teeHeight ? 0 : engagement)));
     const x = 140, top = 36, bracketBottom = top + 31.9 * scale;
     const seat = bracketBottom - WHEEL_STACK * scale;
     const stackBottom = bracketBottom + stack * scale;
-    const boltEnd = stackBottom + engagement * scale;
+    const threadEntry = stackBottom - teeHeight * scale;
+    const boltEnd = threadEntry + engagement * scale;
     const boltX = x + 5 * scale;
     const fmt = value => Number(value.toFixed(2)).toString();
     const dimension = (dx, start, end, colour = '') => `
       <path class="dimension ${colour}" d="M ${dx} ${start} V ${end} M ${dx - 4} ${start} H ${dx + 4} M ${dx - 4} ${end} H ${dx + 4}"/>`;
     let blocks = '', labels = '', cursor = bracketBottom, previousLabel = -Infinity;
+    let lastThroughLabel = -Infinity;
     const pieceCount = combo.reduce((total, item) => total + item.count, 0);
     // Preserve calculator results for arbitrarily large entries without adding
     // millions of SVG nodes. Such a stack is better described by its quantities.
     const detailed = pieceCount <= 80;
     if (detailed) {
-      for (const { size, count } of combo) {
+      for (const item of combo) {
+        const { size, count } = item;
         for (let i = 0; i < count; i++) {
           const height = size * scale, centre = cursor + height / 2;
           const labelY = Math.max(centre, previousLabel + 14);
-          blocks += `<rect class="spacer" data-mm="${size}" x="${x - .25 * scale}" y="${cursor}" width="${63.5 * scale}" height="${height}" fill="url(#spacerMetal)"/>`;
+          blocks += item.type === 'tee'
+            ? `<image class="spacer t-spacer" data-mm="90" data-type="tee" href="assets/calsis-wheel/90mm-t-spacer.png" x="${x - .25 * scale}" y="${cursor}" width="${63.5 * scale}" height="${height}"/>`
+            : `<rect class="spacer" data-mm="${size}" x="${x - .25 * scale}" y="${cursor}" width="${63.5 * scale}" height="${height}" fill="url(#spacerMetal)"/>`;
           labels += `<path class="dimension" d="M ${x + 63.25 * scale + 2} ${centre} H 422 L 432 ${labelY}"/>
-            <text class="spacer-label" x="437" y="${labelY + 4}">${size} mm</text>`;
+            <text class="spacer-label" x="437" y="${labelY + 4}">${spacerName(item)}</text>`;
           cursor += height;
           previousLabel = labelY;
+          if (item.type !== 'tee') lastThroughLabel = labelY;
         }
       }
     } else {
-      blocks = `<rect class="spacer" x="${x - .25 * scale}" y="${bracketBottom}" width="${63.5 * scale}" height="${stack * scale}" fill="url(#spacerMetal)"/>`;
+      blocks = `<rect class="spacer" x="${x - .25 * scale}" y="${bracketBottom}" width="${63.5 * scale}" height="${(stack - teeHeight) * scale}" fill="url(#spacerMetal)"/>`;
+      if (teeHeight) blocks += `<image class="spacer t-spacer" data-mm="90" data-type="tee" href="assets/calsis-wheel/90mm-t-spacer.png" x="${x - .25 * scale}" y="${threadEntry}" width="${63.5 * scale}" height="${90 * scale}"/>`;
     }
+    const engagementX = teeHeight ? 418 : boltX + 8 * scale + 16;
+    const engagementLabelX = teeHeight ? 437 : boltX + 8 * scale + 27;
+    const engagementOrigin = teeHeight ? x + 63.25 * scale + 2 : boltX + 8 * scale + 3;
+    const engagementLabelY = teeHeight
+      ? Math.max((threadEntry + boltEnd) / 2 - 3, lastThroughLabel + 24)
+      : (threadEntry + boltEnd) / 2 - 3;
     const svg = document.getElementById('assemblySvg');
-    svg.setAttribute('viewBox', `60 0 495 ${Math.max(boltEnd + 32, previousLabel + 25)}`);
+    svg.setAttribute('viewBox', `60 0 495 ${Math.max(stackBottom + 32, boltEnd + 32, previousLabel + 25)}`);
+    svg.dataset.threadEntry = threadEntry;
     svg.innerHTML = `
       <title id="assemblySvgTitle">${stack} mm spacer stack with M8 × ${bolt} bolt</title>
-      <desc id="assemblySvgDesc">Side view of the supplied wheel and bracket, ${pieceCount} spacer blocks, and ${fmt(engagement)} mm of exposed thread below the stack. ${detailed ? '' : 'Individual blocks omitted at this stack size; see quantities.'}</desc>
+      <desc id="assemblySvgDesc">Side view of the supplied wheel and bracket, ${pieceCount} spacer blocks, and ${fmt(engagement)} mm of thread engagement ${teeHeight ? 'inside the top of the 90 mm T spacer' : 'below the stack'}. ${detailed ? '' : 'Individual blocks omitted at this stack size; see quantities.'}</desc>
       <defs>
         <linearGradient id="spacerMetal"><stop offset="0" stop-color="#858c9a"/><stop offset=".45" stop-color="#abb1bc"/><stop offset="1" stop-color="#8b929f"/></linearGradient>
         <pattern id="boltThread" patternUnits="userSpaceOnUse" x="${boltX}" y="${seat}" width="${8 * scale}" height="${20 * scale}">
@@ -404,14 +453,17 @@
       <text text-anchor="middle" transform="translate(80 ${(seat + boltEnd) / 2}) rotate(-90)">M8 × ${bolt}</text>
       ${stack > 0 ? dimension(510, bracketBottom, stackBottom) : ''}
       ${stack > 0 ? `<text text-anchor="middle" transform="translate(529 ${(bracketBottom + stackBottom) / 2}) rotate(-90)">${stack} mm stack</text>` : ''}
-      <path class="dimension engagement" d="M ${boltX + 8 * scale + 3} ${stackBottom} H ${boltX + 8 * scale + 20} M ${boltX + 8 * scale + 3} ${boltEnd} H ${boltX + 8 * scale + 20}"/>
-      ${dimension(boltX + 8 * scale + 16, stackBottom, boltEnd, 'engagement')}
-      <text class="engagement-label" x="${boltX + 8 * scale + 27}" y="${(stackBottom + boltEnd) / 2 - 3}">${fmt(engagement)} mm</text>
-      <text class="engagement-label" x="${boltX + 8 * scale + 27}" y="${(stackBottom + boltEnd) / 2 + 12}">engagement</text>`;
+      <path class="dimension engagement" d="M ${engagementOrigin} ${threadEntry} H ${engagementX + 4} M ${engagementOrigin} ${boltEnd} H ${engagementX + 4}"/>
+      ${dimension(engagementX, threadEntry, boltEnd, 'engagement')}
+      <text class="engagement-label" x="${engagementLabelX}" y="${engagementLabelY}">${fmt(engagement)} mm</text>
+      <text class="engagement-label" x="${engagementLabelX}" y="${engagementLabelY + 15}">${teeHeight ? 'in T spacer' : 'engagement'}</text>`;
     document.getElementById('assemblySummary').textContent = `${stack} mm actual stack · M8 × ${bolt} · ${fmt(engagement)} mm engagement`;
     document.getElementById('assemblyKey').innerHTML = combo.length
-      ? combo.map(({size, count}) => `<span>${count} × ${size} mm</span>`).join('')
+      ? combo.map(item => `<span>${item.count} × ${spacerName(item)}</span>`).join('')
       : '<span>No spacers</span>';
+    document.getElementById('assemblyExplanation').textContent = teeHeight
+      ? 'The wheel screw passes through the smaller spacers and engages in the T spacer’s 25 mm tapped top section. Engagement is limited to 20 mm. Bolt length is measured from under the socket head.'
+      : 'Solid blocks show the fitted spacers. The thread below the stack is the length available to engage in the mounting thread. Bolt length is measured from under the socket head.';
     document.getElementById('assemblyPanel').hidden = false;
   }
 
@@ -439,6 +491,7 @@
     comboPanel.style.display = 'none';
     document.getElementById('assemblyPanel').hidden = true;
     document.getElementById('assemblySvg').innerHTML = '';
+    document.getElementById('kitPanel').hidden = true;
 
     if (!Number.isFinite(D) || D <= 0 || !Number.isSafeInteger(Math.ceil(D))) {
       spacerValue.textContent = '—';
@@ -462,7 +515,12 @@
     spacerValue.textContent = S.toFixed(2) + ' mm';
 
     // Spacer stack breakdown
-    const { combo, rounded, decimal } = getSpacerStack(S);
+    const { combo, rounded, decimal, kit, teeHeight } = getSpacerStack(S, selectedKit);
+    document.getElementById('kitPanel').hidden = rounded < 90;
+    for (const button of document.querySelectorAll('.kit-option')) {
+      button.setAttribute('aria-pressed', String(button.dataset.kit === kit));
+    }
+    document.getElementById('spacerSizes').textContent = `S = D/2 − 81.15 · Spacer sizes: ${kit === 'plain' ? '90, ' : kit === 'tee' ? '90 mm T + ' : ''}40, 20, 10, 5, 3, 1 mm`;
     comboPanel.style.display = 'block';
     comboTarget.textContent  = rounded + ' mm actual stack';
     if (Math.abs(decimal) >= 0.01) {
@@ -471,17 +529,17 @@
       comboNote.textContent = '';
     }
 
-    comboBody.innerHTML = combo.map(({ size, count }) => `
+    comboBody.innerHTML = combo.map(item => `
       <tr class="combo-row-used">
-        <td><strong>${size} mm</strong></td>
-        <td>${count}</td>
-        <td style="text-align:center;">${count * 6}</td>
-        <td>${count * 9}</td>
+        <td><strong>${spacerName(item)}</strong></td>
+        <td>${item.count}</td>
+        <td style="text-align:center;">${item.count * 6}</td>
+        <td>${item.count * 9}</td>
       </tr>
     `).join('');
 
     // Bolt calculation
-    const clearance  = WHEEL_STACK + rounded;
+    const clearance  = WHEEL_STACK + rounded - teeHeight;
     const minBolt    = roundUp(clearance + MIN_ENGAGEMENT, BOLT_STEP);
     const maxBolt    = roundDown(clearance + THREAD_DEPTH, BOLT_STEP);
     const noFit      = minBolt > maxBolt;
@@ -516,11 +574,17 @@
           </div>
         </div>`;
 
-      drawAssembly({ combo, stack: rounded, bolt: recommended, engagement: recEng });
+      drawAssembly({ combo, stack: rounded, bolt: recommended, engagement: recEng, teeHeight });
     }
   }
 
   document.getElementById('pipeDia').addEventListener('input', calculate);
+  for (const button of document.querySelectorAll('.kit-option')) {
+    button.addEventListener('click', () => {
+      selectedKit = button.dataset.kit;
+      calculate();
+    });
+  }
 </script>
 </body>
 </html>

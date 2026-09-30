@@ -6,16 +6,34 @@ and has a **Login** link at the top left.
 ## CALSIS wheel and spacer assembly
 
 `Calsis160WheelSpacerCalc.html` includes a live SVG side view using the owner's
-wheel/bracket and thread captures. The drawing updates with the actual selected
-spacers and recommended bolt. The assembly remains opaque, with only the
-engagement thread exposed below the stack. Bolt engagement uses the rounded fitted stack, with the
-existing 7.5 mm bracket/washer allowance, 5 mm minimum and owner-selected 20 mm
-maximum. Bolt sizes remain 5 mm increments. These limits are calculation inputs,
-not an independent verification of the hardware's thread strength or clearance.
+wheel/bracket, thread and 90 mm T-spacer captures. Three clickable kit pictures
+appear when the **rounded fitted stack** reaches 90 mm:
+
+- **Original kit:** 40, 20, 10, 5, 3 and 1 mm spacers.
+- **Plain 90 mm:** adds through-hole 90 mm spacers, including multiples where
+  needed. Wheel bolts pass through the complete stack.
+- **90 mm T:** one T spacer against the unit, with the remaining height made
+  from the smaller spacers above it. Wheel bolts engage in the T's 25 mm tapped
+  top section; its separate mounting bolts are omitted from the drawing.
+
+The original kit is the initial choice. A selected kit is retained within the
+page; below 90 mm all calculations use the smaller spacers, and the retained
+choice returns when the stack reaches 90 mm again. The table, bolt result and
+drawing update together. Rounding to the nearest whole millimetre is preserved.
+
+Bolt engagement uses the actual fitted stack and the existing 7.5 mm
+bracket/washer allowance, with 5 mm minimum and owner-selected 20 mm maximum.
+Bolt sizes remain 5 mm increments. For T spacers only the blocks **above the T**
+are added to the clearance length. A 100 mm stack therefore uses an M8 × 125
+bolt with the original/plain kit, or M8 × 35 with a 90 mm T plus 10 mm spacer;
+both give 17.5 mm engagement. These limits are calculation inputs, not an
+independent verification of the hardware's thread strength or clearance.
 
 Supplied drawing dimensions: bracket width 63 mm, assembly height 31.9 mm,
 wheel diameter 29.8 mm, rectangular spacer width 63.5 mm. Individual spacer
-heights and exposed thread length share one physical scale. The bolt image is
+heights and thread engagement share one physical scale. The T-spacer drawing
+marks engagement inside its top section; through-hole kits show thread below
+the stack. The bolt image is
 registered under the left socket head; its 8 mm-wide/20 mm-long thread texture
 is repeated and clipped, so changing bolt length does not stretch the pitch.
 For more than 80 blocks, the drawing shows a combined stack and retains the
@@ -23,9 +41,8 @@ quantities instead of creating an unbounded number of SVG elements.
 
 `assets/calsis-wheel/` contains cropped/downsampled browser copies and dimension
 references. `reference-images.zip` preserves the original upload, including
-both future 90 mm spacer images. The 90 mm spacer is **not** an available
-calculator size; it remains a reference. No generation or redrawing was applied
-to the wheel/thread captures. Keep the assets folder alongside the HTML when
+the dimensioned 90 mm spacer. No generation or redrawing was applied to the
+wheel/thread/T-spacer captures. Keep the assets folder alongside the HTML when
 using it offline.
 
 Focused browser checks (Playwright and Chromium, as below):
@@ -35,8 +52,10 @@ python3 -m unittest discover -s tests -p test_wheel_spacer_browser.py -v
 ```
 
 They check actual-stack rounding, image loading, per-block dimensions, bolt
-origin/length and exposed engagement, invalid-input clearing,
-mobile and print layout, and retention of the future spacer upload.
+origin/length and engagement, all three kits (90/100/144/180 mm examples),
+short T screws within the tapped section, selector threshold and keyboard
+selection, invalid-input clearing, mobile and print layout, and retention of
+the original upload.
 
 ## Stock Cut plan
 
