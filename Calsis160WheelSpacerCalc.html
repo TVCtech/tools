@@ -234,10 +234,6 @@
     [hidden] { display: none !important; }
     .assembly-title { font-size: 1.05rem; margin-bottom: 4px; }
     .assembly-note { font-size: .85rem; color: var(--muted); }
-    .assembly-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 4px; }
-    .assembly-toolbar label { display: flex; align-items: center; gap: 8px; margin: 0; text-transform: none; letter-spacing: normal; }
-    .assembly-toolbar input { accent-color: var(--accent); }
-    .assembly-toolbar button { border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--accent); padding: 6px 10px; cursor: pointer; }
     .assembly-scroll { overflow-x: auto; }
     #assemblySvg { display: block; width: 100%; }
     #assemblySvg text { font-family: inherit; fill: #334155; font-size: 12px; }
@@ -255,7 +251,7 @@
       #assemblySvg .spacer-label { font-size: 13px; }
     }
     @media print {
-      .top-bar, .assembly-toolbar { display: none; }
+      .top-bar { display: none; }
       .assembly-scroll { overflow: visible; }
       #assemblySvg { min-width: 0; }
       #assemblyPanel { break-inside: avoid; }
@@ -311,16 +307,11 @@
     <div class="result-value" id="boltValue">—</div>
     <div id="boltRange" style="display:none;"></div>
     <div class="result-note" id="boltNote" style="display:none;"></div>
-    <div class="breakdown" id="boltBreakdown" style="display:none;"></div>
   </div>
 
   <section class="panel" id="assemblyPanel" hidden aria-labelledby="assemblyHeading">
     <h2 class="assembly-title" id="assemblyHeading">Wheel, spacer &amp; bolt assembly</h2>
     <p class="assembly-note" id="assemblySummary"></p>
-    <div class="assembly-toolbar">
-      <label><input type="checkbox" id="showBoltPath" /> Show hidden bolt path</label>
-      <button type="button" id="assemblyExample">40 mm example</button>
-    </div>
     <div class="assembly-scroll">
       <svg id="assemblySvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="assemblySvgTitle assemblySvgDesc"></svg>
     </div>
@@ -340,7 +331,6 @@
   const MIN_ENGAGEMENT = 5;
   const BOLT_STEP      = 5;
   const SPACER_SIZES   = [40, 20, 10, 5, 3, 1];
-  let currentAssembly = null;
 
   function roundUp(v, s)   { return Math.ceil(v / s) * s; }
   function roundDown(v, s) { return Math.floor(v / s) * s; }
@@ -359,10 +349,6 @@
     return { combo, rounded, decimal: targetMm - rounded };
   }
 
-  function bv(text, muted = false) {
-    return `<div class="breakdown-row"><span class="bl">${text.label}</span><span class="bv${muted ? ' muted' : ''}">${text.value}</span></div>`;
-  }
-
   function drawAssembly({ combo, stack, bolt, engagement }) {
     // Owner's dimensioned CAD: 63 mm bracket, 31.9 mm overall height,
     // 29.8 mm wheel and 63.5 mm rectangular spacer blocks. Bolt centre is
@@ -373,7 +359,6 @@
     const stackBottom = bracketBottom + stack * scale;
     const boltEnd = stackBottom + engagement * scale;
     const boltX = x + 5 * scale;
-    const showPath = document.getElementById('showBoltPath').checked;
     const fmt = value => Number(value.toFixed(2)).toString();
     const dimension = (dx, start, end, colour = '') => `
       <path class="dimension ${colour}" d="M ${dx} ${start} V ${end} M ${dx - 4} ${start} H ${dx + 4} M ${dx - 4} ${end} H ${dx + 4}"/>`;
@@ -410,7 +395,7 @@
       </defs>
       <text x="${x}" y="20">Wheel Ø29.8 mm</text>
       <rect id="boltShaft" x="${boltX}" y="${seat}" width="${8 * scale}" height="${bolt * scale}" fill="url(#boltThread)"/>
-      <g opacity="${showPath ? '.25' : '1'}">
+      <g>
         ${blocks}
         <image id="wheelImage" href="assets/calsis-wheel/wheel-bracket.png" x="${x}" y="${top}" width="${63 * scale}" height="${31.9 * scale}" preserveAspectRatio="none"/>
       </g>
@@ -444,7 +429,6 @@
     const boltValue   = document.getElementById('boltValue');
     const boltRange   = document.getElementById('boltRange');
     const boltNote    = document.getElementById('boltNote');
-    const boltBreak   = document.getElementById('boltBreakdown');
 
     // Reset
     spacerCard.className  = 'result-card';
@@ -452,11 +436,9 @@
     spacerNote.style.display = 'none';
     boltNote.style.display   = 'none';
     boltRange.style.display  = 'none';
-    boltBreak.style.display  = 'none';
     comboPanel.style.display = 'none';
     document.getElementById('assemblyPanel').hidden = true;
     document.getElementById('assemblySvg').innerHTML = '';
-    currentAssembly = null;
 
     if (!Number.isFinite(D) || D <= 0 || !Number.isSafeInteger(Math.ceil(D))) {
       spacerValue.textContent = '—';
@@ -534,25 +516,11 @@
           </div>
         </div>`;
 
-      boltBreak.style.display = 'block';
-      boltBreak.innerHTML =
-        bv({ label: 'Wheel + washers',      value: WHEEL_STACK + ' mm' }) +
-        bv({ label: 'Actual spacer stack',   value: rounded + ' mm' }) +
-        bv({ label: 'Clearance total',      value: clearance.toFixed(2) + ' mm' }) +
-        bv({ label: 'Max thread engagement', value: recEng.toFixed(2) + ' mm' });
-      currentAssembly = { combo, stack: rounded, bolt: recommended, engagement: recEng };
-      drawAssembly(currentAssembly);
+      drawAssembly({ combo, stack: rounded, bolt: recommended, engagement: recEng });
     }
   }
 
   document.getElementById('pipeDia').addEventListener('input', calculate);
-  document.getElementById('showBoltPath').addEventListener('change', () => {
-    if (currentAssembly) drawAssembly(currentAssembly);
-  });
-  document.getElementById('assemblyExample').addEventListener('click', () => {
-    document.getElementById('pipeDia').value = '242.3';
-    calculate();
-  });
 </script>
 </body>
 </html>

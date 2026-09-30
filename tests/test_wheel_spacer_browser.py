@@ -68,13 +68,9 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                         return im.naturalWidth > 0 && im.naturalHeight > 0;
                     }''', f'assets/calsis-wheel/{asset}')
                     self.assertTrue(loaded)
-                page.locator('#showBoltPath').check()
-                expect(page.locator('#assemblySvg > g')).to_have_attribute('opacity', '.25')
-                page.locator('#assemblyExample').click()
-                expect(page.locator('#pipeDia')).to_have_value('242.3')
+                page.locator('#pipeDia').fill('242.3')
                 expect(page.locator('#assemblySvg .spacer')).to_have_count(1)
-                page.locator('#showBoltPath').uncheck()
-                expect(page.locator('#assemblySvg > g')).to_have_attribute('opacity', '1')
+                expect(page.locator('#showBoltPath, #assemblyExample, #boltBreakdown')).to_have_count(0)
                 page.locator('#assemblyPanel').screenshot(path='/tmp/wheel-spacer-desktop.png')
                 page.set_viewport_size({'width': 390, 'height': 844})
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
@@ -82,7 +78,6 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 page.locator('#assemblyPanel').screenshot(path='/tmp/wheel-spacer-mobile.png')
                 page.emulate_media(media='print')
                 expect(page.locator('#assemblyPanel')).to_be_visible()
-                expect(page.locator('.assembly-toolbar')).to_be_hidden()
                 page.emulate_media(media='screen')
                 # Invalid/cleared input cannot leave a stale diagram visible.
                 for value in ['100', '', '1e100']:

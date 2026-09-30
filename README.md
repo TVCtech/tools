@@ -7,9 +7,8 @@ and has a **Login** link at the top left.
 
 `Calsis160WheelSpacerCalc.html` includes a live SVG side view using the owner's
 wheel/bracket and thread captures. The drawing updates with the actual selected
-spacers and recommended bolt. A hidden-bolt-path checkbox makes the covering
-parts translucent; it does not change the calculation. The 40 mm example sets
-pipe ID to 242.3 mm. Bolt engagement uses the rounded fitted stack, with the
+spacers and recommended bolt. The assembly remains opaque, with only the
+engagement thread exposed below the stack. Bolt engagement uses the rounded fitted stack, with the
 existing 7.5 mm bracket/washer allowance, 5 mm minimum and owner-selected 20 mm
 maximum. Bolt sizes remain 5 mm increments. These limits are calculation inputs,
 not an independent verification of the hardware's thread strength or clearance.
@@ -36,7 +35,7 @@ python3 -m unittest discover -s tests -p test_wheel_spacer_browser.py -v
 ```
 
 They check actual-stack rounding, image loading, per-block dimensions, bolt
-origin/length and exposed engagement, path visibility, invalid-input clearing,
+origin/length and exposed engagement, invalid-input clearing,
 mobile and print layout, and retention of the future spacer upload.
 
 ## Stock Cut plan
