@@ -76,6 +76,8 @@
     }
 
     input[type="number"] {
+      appearance: textfield;
+      -moz-appearance: textfield;
       width: 100%;
       padding: 12px 14px;
       font-size: 1.3rem;
@@ -85,6 +87,11 @@
       color: var(--text);
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
     input[type="number"]:focus {
       outline: none;
@@ -366,15 +373,14 @@
 <script>
   const OFFSET         = 81.15;
   const WHEEL_STACK    = 7.5;
-  const THREAD_DEPTH   = 20;
+  const THREAD_DEPTH   = 22;
   const MIN_ENGAGEMENT = 5;
-  const BOLT_STEP      = 5;
   const SPACER_SIZES   = [40, 20, 10, 5, 3, 1];
   let selectedKit = 'original';
   const spacerName = item => `${item.size} mm${item.type === 'tee' ? ' T' : ''}`;
 
-  function roundUp(v, s)   { return Math.ceil(v / s) * s; }
-  function roundDown(v, s) { return Math.floor(v / s) * s; }
+  function roundUp(v) { const step = v <= 70 ? 5 : 10; return Math.ceil(v / step) * step; }
+  function roundDown(v) { const step = v < 70 ? 5 : 10; return Math.floor(v / step) * step; }
 
   function getSpacerStack(targetMm, kit = 'original', customHeight = 90) {
     const rounded = Math.round(targetMm);
@@ -475,7 +481,6 @@
           <image href="assets/calsis-wheel/thread-20mm.png" width="${8 * scale}" height="${20 * scale}" preserveAspectRatio="none"/>
         </pattern>
       </defs>
-      <text x="${x}" y="20">Wheel Ø29.8 mm</text>
       <rect id="boltShaft" x="${boltX}" y="${seat}" width="${8 * scale}" height="${bolt * scale}" fill="url(#boltThread)"/>
       <g>
         ${blocks}
@@ -591,8 +596,8 @@
 
     // Bolt calculation
     const clearance  = WHEEL_STACK + rounded - teeHeight;
-    const minBolt    = roundUp(clearance + MIN_ENGAGEMENT, BOLT_STEP);
-    const maxBolt    = roundDown(clearance + THREAD_DEPTH, BOLT_STEP);
+    const minBolt    = roundUp(clearance + MIN_ENGAGEMENT);
+    const maxBolt    = roundDown(clearance + THREAD_DEPTH);
     const noFit      = minBolt > maxBolt;
     const recommended = noFit ? null : maxBolt;
 

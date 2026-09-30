@@ -28,11 +28,11 @@ nearest whole millimetre is preserved. Invalid custom entries clear the prior
 result and show an inline message; no popup is used.
 
 Bolt engagement uses the actual fitted stack and the existing 7.5 mm
-bracket/washer allowance, with 5 mm minimum and owner-selected 20 mm maximum.
-Bolt sizes remain 5 mm increments. For T spacers only the blocks **above the
-uppermost T** are added to the clearance length. A 100 mm stack therefore uses an M8 × 125
+bracket/washer allowance, with 5 mm minimum and owner-selected 22 mm maximum.
+Bolt sizes use 5 mm increments below 70 mm, then 10 mm increments from 70 mm upward. For T spacers only the blocks **above the
+uppermost T** are added to the clearance length. A 100 mm stack therefore uses an M8 × 120
 bolt with the original/plain kit, or M8 × 35 with a 90 mm T plus 10 mm spacer;
-both give 17.5 mm engagement. A 200 mm stack using two standard 90 mm T
+These give 12.5 mm and 17.5 mm engagement respectively. A 200 mm stack using two standard 90 mm T
 spacers plus 20 mm uses M8 × 45, again with 17.5 mm engagement. These limits
 are calculation inputs, not an
 independent verification of the hardware's thread strength or clearance.

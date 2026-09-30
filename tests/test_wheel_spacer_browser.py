@@ -25,9 +25,9 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                     ('242.3', 40, 65, [40]),
                     ('180', 9, 35, [5, 3, 1]),
                     ('179', 8, 35, [5, 3]),
-                    ('467', 152, 175, [40, 40, 40, 20, 10, 1, 1]),
+                    ('467', 152, 180, [40, 40, 40, 20, 10, 1, 1]),
                     ('162.5', 0, 25, []),
-                    ('342.3', 90, 115, [40, 40, 10]),
+                    ('342.3', 90, 110, [40, 40, 10]),
                 ]:
                     with self.subTest(diameter=diameter):
                         page.locator('#pipeDia').fill(diameter)
@@ -61,6 +61,20 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                         self.assertAlmostEqual(tip - bottom, engagement * scale)
                         expect(page.locator('#assemblySummary')).to_contain_text(f'{engagement:g} mm engagement')
 
+                # Stock lengths step by 10 mm from 70 onward. These ranges
+                # independently cover both ends of the transition and the new
+                # engagement allowance (42 mm stack allows 21.5 mm engagement).
+                for stack, minimum, maximum in [(40,55,65),(41,55,70),(42,55,70),
+                                                (45,60,70),(50,65,70),(51,65,80),
+                                                (57,70,80),(58,80,80)]:
+                    page.locator('#pipeDia').fill(str(2 * stack + 162.3))
+                    expect(page.locator('#boltValue')).to_have_text(f'M8 × {maximum}')
+                    expect(page.locator('.bolt-range-end .bolt-name')).to_have_text(
+                        [f'M8 × {minimum}', f'M8 × {maximum}'])
+                    self.assertLessEqual(maximum - stack - 7.5, 22)
+                expect(page.locator('#assemblySvg')).not_to_contain_text('Wheel Ø')
+                self.assertEqual(page.locator('#pipeDia').evaluate(
+                    "e => getComputedStyle(e).appearance"), 'textfield')
                 # The supplied PNGs must really decode, not just have an href.
                 for asset in ['wheel-bracket.png', 'thread-20mm.png', '90mm-t-spacer.png']:
                     loaded = page.evaluate('''async url => {
@@ -103,28 +117,28 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 # Hand-calculated examples exercise both 90 mm types, thin
                 # spacers, repeated plain 90s, and stacked T spacers.
                 cases = [
-                    ('342.3', 90, 115, {'original':[40,40,10], 'plain':[90], 'tee':[90]}),
-                    ('362.3', 100, 125, {'original':[40,40,20], 'plain':[90,10], 'tee':[10,90]}),
-                    ('450.3', 144, 170, {'original':[40,40,40,20,3,1], 'plain':[90,40,10,3,1], 'tee':[40,10,3,1,90]}),
-                    ('522.3', 180, 205, {'original':[40,40,40,40,20], 'plain':[90,90], 'tee':[90,90]}),
+                    ('342.3', 90, 110, 25, {'original':[40,40,10], 'plain':[90], 'tee':[90]}),
+                    ('362.3', 100, 120, 35, {'original':[40,40,20], 'plain':[90,10], 'tee':[10,90]}),
+                    ('450.3', 144, 170, 80, {'original':[40,40,40,20,3,1], 'plain':[90,40,10,3,1], 'tee':[40,10,3,1,90]}),
+                    ('522.3', 180, 200, 25, {'original':[40,40,40,40,20], 'plain':[90,90], 'tee':[90,90]}),
                 ]
-                # For 180 mm: clearance 187.5, longest allowed bolt is 205.
-                for diameter, stack, full_bolt, choices in cases:
+                # For 180 mm: clearance 187.5, longest allowed bolt is 200.
+                for diameter, stack, full_bolt, tee_bolt, choices in cases:
                     page.locator('#pipeDia').fill(diameter)
                     expect(page.locator('#kitPanel')).to_be_visible()
                     for kit, pieces in choices.items():
                         with self.subTest(stack=stack, kit=kit):
                             page.locator(f'[data-kit="{kit}"]').click()
                             t_total = (stack // 90) * 90 if kit == 'tee' else 0
-                            bolt = full_bolt - t_total
-                            engagement = full_bolt - stack - 7.5
+                            bolt = tee_bolt if kit == 'tee' else full_bolt
+                            engagement = bolt - (stack - t_total) - 7.5
                             expect(page.locator('#boltValue')).to_have_text(f'M8 × {bolt}')
                             expect(page.locator(f'[data-kit="{kit}"]')).to_have_attribute('aria-pressed','true')
                             self.assertEqual(page.locator('#assemblySvg .spacer').evaluate_all(
                                 '(items) => items.map(item => Number(item.dataset.mm))'), pieces)
                             expect(page.locator('#assemblySummary')).to_contain_text(f'{stack} mm actual stack')
                             expect(page.locator('#assemblySummary')).to_contain_text(f'{engagement:g} mm engagement')
-                            self.assertLessEqual(engagement,20)
+                            self.assertLessEqual(engagement,22)
                             self.assertGreaterEqual(engagement,5)
                             if kit == 'tee':
                                 expect(page.locator('#comboBody')).to_contain_text('90 mm T')
@@ -145,7 +159,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 page.locator('#pipeDia').fill('341.1')
                 expect(page.locator('#kitPanel')).to_be_hidden()
                 expect(page.locator('[data-kit=tee]')).to_be_disabled()
-                expect(page.locator('#boltValue')).to_have_text('M8 × 115')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 110')
                 expect(page.locator('.t-spacer')).to_have_count(0)
                 page.locator('#pipeDia').fill('341.3')
                 expect(page.locator('#kitPanel')).to_be_visible()
@@ -154,7 +168,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 page.locator('#pipeDia').fill('362.3')
                 page.get_by_role('button',name='Plain 90 mm Through holes').focus()
                 page.keyboard.press('Enter')
-                expect(page.locator('#boltValue')).to_have_text('M8 × 125')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 120')
                 page.locator('[data-kit="tee"]').click()
                 for dimensions in [{'width':1000,'height':1100},{'width':390,'height':844}]:
                     page.set_viewport_size(dimensions)
@@ -185,7 +199,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 page.locator('[data-kit=custom]').click()
                 expect(page.locator('#customTeeFields')).to_be_visible()
                 page.locator('#customTeeHeight').fill('120')
-                expect(page.locator('#boltValue')).to_have_text('M8 × 105')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 100')
                 expect(page.locator('.t-spacer')).to_have_count(1)
                 self.assertEqual(page.locator('#comboBody tr').last.locator('td').all_text_contents(),
                                  ['120 mm T','1','6','9'])
@@ -200,7 +214,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 self.assertAlmostEqual(geometry['vertical'][0],25*geometry['scale'])
                 self.assertAlmostEqual(geometry['height']-geometry['vertical'][1],15*geometry['scale'])
                 self.assertAlmostEqual(geometry['entry'],geometry['y'])
-                self.assertAlmostEqual(geometry['tip']-geometry['y'],17.5*geometry['scale'])
+                self.assertAlmostEqual(geometry['tip']-geometry['y'],12.5*geometry['scale'])
                 self.assertLess(geometry['tip'],geometry['y']+25*geometry['scale'])
                 # No kit selector or T spacer is used below the 90 mm threshold.
                 page.locator('#pipeDia').fill('312.3')  # 75 mm stack
@@ -209,7 +223,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 expect(page.locator('.t-spacer')).to_have_count(0)
                 page.locator('#pipeDia').fill('562.3')
                 expect(page.locator('#kitPanel')).to_be_visible()
-                expect(page.locator('#boltValue')).to_have_text('M8 × 105')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 100')
                 # Too-short, fractional, absent or too-tall custom sizes clear
                 # the old result; the same input can recover without a popup.
                 for value in ['89','120.5','','201']:
