@@ -265,7 +265,6 @@ if (typeof document !== "undefined") {
   const $=id=>document.getElementById(id);
   const api=StockCutPlan;
   let current=null, revision=0;
-  const palette=["#bfdbfe","#bbf7d0","#fde68a","#ddd6fe","#fecdd3","#a5f3fc"];
   function invalidate(message="Inputs changed. Select Plan cuts to update the plan.") {
     revision++; current=null; $("results").hidden=true; $("error").hidden=true;
     $("bars").replaceChildren(); $("report-text").value=""; $("report-fallback").hidden=true; $("status").textContent=message;
@@ -281,7 +280,6 @@ if (typeof document !== "undefined") {
     $("quality").textContent=api.quality(result);
     $("settings-summary").textContent="Stock "+api.mm(c.stock)+" mm · Kerf "+api.mm(c.kerf)+" mm ("+(c.mode==="each"?"after each piece; none at an exact finish":"between pieces only")+") · Start trim "+api.mm(c.trimStart)+" mm · End trim "+api.mm(c.trimEnd)+" mm";
     $("loss-summary").textContent="Saw kerf loss: "+api.mm(result.sawLoss)+" mm · Trim loss: "+api.mm(result.trimLoss)+" mm. Offcuts may be reusable; they are shown separately.";
-    const colours=new Map([...new Set(result.pieces)].map((size,index)=>[size,palette[index%palette.length]]));
     const cards=result.groups.map(group=>{
       const card=document.createElement("article"); card.className="bar-card";
       const heading=document.createElement("div"); heading.className="bar-heading";
@@ -294,7 +292,7 @@ if (typeof document !== "undefined") {
       function segment(size,type,label) {
         if (!size) return;
         const cell=document.createElement("span"); cell.className="segment "+type; cell.style.width=(100*size/c.stock)+"%"; cell.title=label+": "+api.mm(size)+" mm";
-        if (type==="piece") { cell.style.background=colours.get(size); if (size/c.stock>=.055) cell.textContent=api.mm(size); }
+        if (type==="piece" && size/c.stock>=.055) cell.textContent=api.mm(size);
         diagram.append(cell);
       }
       segment(c.trimStart,"trim","Start trim");
