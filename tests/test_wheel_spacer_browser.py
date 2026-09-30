@@ -243,6 +243,11 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                         return {labelRight:Math.max(...labels.map(r=>r.right)),spacerLeft:spacer.left};
                     }''')
                     self.assertLess(bounds['labelRight'],bounds['spacerLeft'])
+                    displayed_font = page.locator('#assemblySvg .spacer-label').first.evaluate('''label => {
+                        const matrix = label.getScreenCTM();
+                        return parseFloat(getComputedStyle(label).fontSize) * Math.hypot(matrix.a, matrix.b);
+                    }''')
+                    self.assertAlmostEqual(displayed_font, 14, places=1)
                     self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
                     expect(page.locator('#assemblyExplanation, .assembly-reference')).to_have_count(0)
                     page.screenshot(path=f"/tmp/wheel-custom-final-{dimensions['width']}.png",full_page=True)

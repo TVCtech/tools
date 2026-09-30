@@ -258,18 +258,16 @@
     .assembly-note { font-size: .85rem; color: var(--muted); }
     .assembly-scroll { overflow-x: auto; }
     #assemblySvg { display: block; width: 100%; }
-    #assemblySvg text { font-family: inherit; fill: #334155; font-size: 14px; }
+    #assemblySvg text { font-family: inherit; fill: #334155; font-size: var(--assembly-label-size, 14px); }
     #assemblySvg .dimension { fill: none; stroke: #64748b; stroke-width: 1; }
     #assemblySvg .engagement { stroke: #2563eb; }
     #assemblySvg .engagement-label { fill: #1d4ed8; }
     #assemblySvg .spacer { stroke: #626978; stroke-width: .8; }
-    #assemblySvg .spacer-label { font-size: 13px; }
+    #assemblySvg .spacer-label { font-size: var(--assembly-label-size, 14px); }
     .assembly-key { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; font-size: .8rem; }
     .assembly-key span { background: #f1f5f9; padding: 3px 8px; border-radius: 4px; }
     @media (max-width: 480px) {
       .kit-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      #assemblySvg text { font-size: 16px; }
-      #assemblySvg .spacer-label { font-size: 15px; }
     }
     @media print {
       .top-bar { display: none; }
@@ -431,8 +429,16 @@
     // Owner's dimensioned CAD: 63 mm bracket, 31.9 mm overall height,
     // 29.8 mm wheel and 63.5 mm rectangular spacer blocks. Bolt centre is
     // 9 mm from the bracket's left edge, registered to the supplied capture.
-    const scale = Math.min(4.2, 410 / (31.9 + stack + (teeHeight ? 0 : engagement)));
-    const x = 140, top = 36, bracketBottom = top + 31.9 * scale;
+    const svg = document.getElementById('assemblySvg');
+    document.getElementById('assemblyPanel').hidden = false;
+    // SVG font sizes are drawing units. Compensate for the displayed scale
+    // so labels remain 14 CSS pixels, including on a narrow phone screen.
+    const displayScale = svg.getBoundingClientRect().width / 615 || 1;
+    const labelSize = 14 / displayScale;
+    const labelSpacing = 18 / displayScale;
+    svg.style.setProperty('--assembly-label-size', `${labelSize}px`);
+    const scale = Math.min(3.0, 410 / (31.9 + stack + (teeHeight ? 0 : engagement)));
+    const x = 200, top = 36, bracketBottom = top + 31.9 * scale;
     const seat = bracketBottom - WHEEL_STACK * scale;
     const stackBottom = bracketBottom + stack * scale;
     const threadEntry = stackBottom - teeHeight * scale;
@@ -451,12 +457,12 @@
         const { size, count } = item;
         for (let i = 0; i < count; i++) {
           const height = size * scale, centre = cursor + height / 2;
-          const labelY = Math.max(centre, previousLabel + 18);
+          const labelY = Math.max(centre, previousLabel + labelSpacing);
           blocks += item.type === 'tee'
             ? teeDrawing(item, x - .25 * scale, cursor, 63.5 * scale, height)
             : `<rect class="spacer" data-mm="${size}" x="${x - .25 * scale}" y="${cursor}" width="${63.5 * scale}" height="${height}" fill="url(#spacerMetal)"/>`;
-          labels += `<path class="dimension" d="M ${x + 63.25 * scale + 2} ${centre} H 422 L 432 ${labelY}"/>
-            <text class="spacer-label" x="437" y="${labelY + 4}">${spacerName(item)}</text>`;
+          labels += `<path class="dimension" d="M ${x + 63.25 * scale + 2} ${centre} H 400 L 410 ${labelY}"/>
+            <text class="spacer-label" x="415" y="${labelY + 4}">${spacerName(item)}</text>`;
           cursor += height;
           previousLabel = labelY;
         }
@@ -465,12 +471,11 @@
       blocks = `<rect class="spacer" x="${x - .25 * scale}" y="${bracketBottom}" width="${63.5 * scale}" height="${(stack - teeHeight) * scale}" fill="url(#spacerMetal)"/>`;
       if (teeHeight) blocks += `<rect class="spacer" x="${x - .25 * scale}" y="${threadEntry}" width="${63.5 * scale}" height="${teeHeight * scale}" fill="#727986"/>`;
     }
-    const engagementX = 118;
+    const engagementX = 180;
     const engagementLabelX = engagementX - 8;
     const engagementOrigin = teeHeight ? x - .25 * scale - 2 : boltX - 3;
     const engagementLabelY = (threadEntry + boltEnd) / 2 - 3;
-    const svg = document.getElementById('assemblySvg');
-    svg.setAttribute('viewBox', `0 0 555 ${Math.max(stackBottom + 32, boltEnd + 32, previousLabel + 25)}`);
+    svg.setAttribute('viewBox', `0 0 615 ${Math.max(stackBottom + 32, boltEnd + 32, previousLabel + labelSpacing + 10)}`);
     svg.dataset.threadEntry = threadEntry;
     svg.innerHTML = `
       <title id="assemblySvgTitle">${stack} mm spacer stack with M8 × ${bolt} bolt</title>
@@ -488,13 +493,13 @@
       </g>
       ${labels}
       ${dimension(24, seat, boltEnd)}
-      <text text-anchor="middle" transform="translate(12 ${(seat + boltEnd) / 2}) rotate(-90)">M8 × ${bolt}</text>
-      ${stack > 0 ? dimension(510, bracketBottom, stackBottom) : ''}
-      ${stack > 0 ? `<text text-anchor="middle" transform="translate(529 ${(bracketBottom + stackBottom) / 2}) rotate(-90)">${stack} mm stack</text>` : ''}
+      <text text-anchor="middle" transform="translate(18 ${(seat + boltEnd) / 2}) rotate(-90)">M8 × ${bolt}</text>
+      ${stack > 0 ? dimension(570, bracketBottom, stackBottom) : ''}
+      ${stack > 0 ? `<text text-anchor="middle" transform="translate(589 ${(bracketBottom + stackBottom) / 2}) rotate(-90)">${stack} mm stack</text>` : ''}
       <path class="dimension engagement" d="M ${engagementOrigin} ${threadEntry} H ${engagementX - 4} M ${engagementOrigin} ${boltEnd} H ${engagementX - 4}"/>
       ${dimension(engagementX, threadEntry, boltEnd, 'engagement')}
       <text class="engagement-label" text-anchor="end" x="${engagementLabelX}" y="${engagementLabelY}">${fmt(engagement)} mm</text>
-      <text class="engagement-label" text-anchor="end" x="${engagementLabelX}" y="${engagementLabelY + 19}">${teeHeight ? 'in T spacer' : 'engagement'}</text>`;
+      <text class="engagement-label" text-anchor="end" x="${engagementLabelX}" y="${engagementLabelY + labelSpacing}">${teeHeight ? 'in T spacer' : 'engagement'}</text>`;
     document.getElementById('assemblySummary').textContent = `${stack} mm actual stack · M8 × ${bolt} · ${fmt(engagement)} mm engagement`;
     document.getElementById('assemblyKey').innerHTML = combo.length
       ? combo.map(item => `<span>${item.count} × ${spacerName(item)}</span>`).join('')
@@ -634,6 +639,7 @@
     }
   }
 
+  window.addEventListener('resize', calculate);
   document.getElementById('pipeDia').addEventListener('input', calculate);
   document.getElementById('customTeeHeight').addEventListener('input', calculate);
   for (const button of document.querySelectorAll('.kit-option')) {
