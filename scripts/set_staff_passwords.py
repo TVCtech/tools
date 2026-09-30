@@ -1,4 +1,4 @@
-"""Privately prompt for role passwords and build encrypted user pages."""
+"""Set role passwords, build user pages and save private keys for later rebuilds."""
 import argparse
 import getpass
 import json
@@ -31,6 +31,7 @@ def main():
         shutil.copytree(ROOT / "examples/staff", source)
         print(f"Created private source folder with dummy pages: {source}")
     print("Enter two different passwords. Use long, unique passphrases.")
+    print("Encryption keys will be saved privately on this machine for future rebuilds.")
     if args.show_passwords:
         print("Passwords will be visible in your terminal. The script does not save them.")
     else:
@@ -50,7 +51,8 @@ def main():
         parser.error("Admin and Technician must have different passwords; no pages were changed.")
     result = subprocess.run(
         [args.node, str(ROOT / "scripts/build-staff.cjs")],
-        input=json.dumps({"source": str(source), "passwords": passwords}),
+        input=json.dumps({"source": str(source), "passwords": passwords,
+                         "keyFile": str(Path.home() / ".config/tvc-tools/build-keys.json")}),
         text=True, encoding="utf-8", cwd=ROOT,
     )
     if result.returncode:

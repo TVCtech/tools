@@ -35,7 +35,24 @@ The Python command creates a sibling `tools-private` directory with the two
 dummy pages on first use. It prompts for and confirms each password with echo
 disabled, and passes them to the builder through stdin. They are never saved
 or included in command arguments. Use two different, long, unique passphrases.
-The same command rebuilds after editing tools or changing passwords.
+It also saves derived encryption keys to `~/.config/tvc-tools/build-keys.json`,
+outside the repository. The file is created with owner-only read/write
+permissions (0600), in a new private directory (0700). These keys can unlock
+the tools, so protect them like passwords and never commit or share them.
+The password text itself is not saved. Run this setup again when changing
+passwords or setting up another machine.
+
+After this one-time setup, rebuild edited tools without entering passwords:
+
+```sh
+python3 scripts/rebuild_staff.py
+```
+
+This uses the local private keys and checks that they still unlock the current
+encrypted pages before changing output. It refuses missing, outdated or
+overly permissive key files. Both setup and rebuild only change local files;
+publishing remains a separate Git operation. The build will not write keys
+inside the public repository or generated output directory.
 
 To see the passwords while typing and confirming them, use:
 
@@ -91,8 +108,8 @@ Edit `tools-private/manifest.json` outside this repository:
 
 Use `"access": "admin"` for an admin-only tool. Technician tools are included
 automatically in the admin bundle, so there is one source file to maintain.
-File paths are relative to the private directory. Rebuild with the password
-prompt above. Keep a private backup of that directory.
+File paths are relative to the private directory. Rebuild with
+`python3 scripts/rebuild_staff.py`. Keep a private backup of that directory.
 
 Tools must be self-contained HTML, with their private JavaScript, CSS and data
 inline. The builder does not follow or encrypt external asset links. Tools run
@@ -122,7 +139,8 @@ npm test
 
 Build tests verify role separation, admin inclusion of technician content,
 absence of plaintext/passwords in output, stable salts, password changes and
-private-source path checks. Browser tests use temporary output and fixture
+private-source path checks, private key permissions, key-based rebuilds and
+rejection of stale keys. Browser tests use temporary output and fixture
 passwords only, never overwrite the configured site, and exercise both roles,
 remembered access across a browser restart, logout across tabs, browser Back,
 and disabled persistent storage:

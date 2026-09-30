@@ -59,9 +59,37 @@ function saveFiles(output, files) {
     }
 }
 
-async function build({ source, passwords, output = ROOT }) {
-    if (!passwords || ROLES.some((role) => typeof passwords[role] !== "string" || !passwords[role])) throw new Error("Both passwords are required.");
-    if (passwords.admin === passwords.technician) throw new Error("Use different passwords for Admin and Technician.");
+function privateKeyPath(filename, output) {
+    const target = path.resolve(filename);
+    let ancestor = path.dirname(target);
+    while (!fs.existsSync(ancestor)) ancestor = path.dirname(ancestor);
+    const resolved = path.resolve(fs.realpathSync(ancestor), path.relative(ancestor, target));
+    if (inside(fs.realpathSync(ROOT), resolved) || inside(path.resolve(output), resolved)) {
+        throw new Error("Encryption keys must stay outside the public repository and output.");
+    }
+    if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink()) throw new Error("Key file must not be a symlink.");
+    return target;
+}
+
+function saveKeys(filename, record) {
+    const directory = path.dirname(filename);
+    fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+    // Only the dedicated key directory is accepted by the wrapper by default.
+    const temp = filename + "." + crypto.randomBytes(8).toString("hex") + ".tmp";
+    try {
+        fs.writeFileSync(temp, JSON.stringify(record) + "\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+        fs.renameSync(temp, filename);
+    } finally {
+        if (fs.existsSync(temp)) fs.unlinkSync(temp);
+    }
+}
+
+async function build({ source, passwords, keyFile, output = ROOT }) {
+    if (passwords) {
+        if (ROLES.some((role) => typeof passwords[role] !== "string" || !passwords[role])) throw new Error("Both passwords are required.");
+        if (passwords.admin === passwords.technician) throw new Error("Use different passwords for Admin and Technician.");
+    } else if (!keyFile) throw new Error("Passwords or a private key file are required.");
+    const keyPath = keyFile ? privateKeyPath(keyFile, output) : null;
     const tools = loadTools(source);
     const saltPath = path.join(output, "staff-salts.json");
     const salts = fs.existsSync(saltPath) ? JSON.parse(fs.readFileSync(saltPath, "utf8")) : {};
@@ -69,11 +97,30 @@ async function build({ source, passwords, output = ROOT }) {
         salts[role] ??= crypto.randomBytes(16).toString("hex");
         if (!/^[a-f0-9]{32}$/.test(salts[role])) throw new Error("Invalid staff salt configuration.");
     }
+    let keys;
+    if (passwords) {
+        keys = { version: 1, roles: {} };
+        for (const role of ROLES) keys.roles[role] = {
+            salt: salts[role], hash: await cryptoEngine.hashPassword(passwords[role], salts[role]),
+        };
+    } else {
+        if (process.platform !== "win32" && (fs.statSync(keyPath).mode & 0o077)) throw new Error("Key file must be readable only by its owner.");
+        keys = JSON.parse(fs.readFileSync(keyPath, "utf8"));
+        if (keys.version !== 1) throw new Error("Unsupported key file.");
+        for (const role of ROLES) {
+            const key = keys.roles?.[role];
+            if (!key || key.salt !== salts[role] || !/^[a-f0-9]{64}$/.test(key.hash)) throw new Error("Saved keys do not match the site configuration.");
+            const existing = fs.readFileSync(path.join(output, role + ".html"), "utf8");
+            const config = JSON.parse(existing.match(/<script id="staff-config" type="application\/json">(.*?)<\/script>/s)[1]);
+            const checked = await codec.decode(config.encrypted.staticryptEncryptedMsgUniqueVariableName, key.hash, key.salt);
+            if (!checked.success || JSON.parse(checked.decoded).role !== role) throw new Error("Saved keys no longer unlock this site. Set passwords again to refresh them.");
+        }
+    }
     const files = assets();
     for (const role of ROLES) {
         const selected = tools.filter((tool) => role === "admin" || tool.access === "technician");
         const plain = JSON.stringify({ version: 1, role, tools: selected });
-        const encrypted = await codec.encode(plain, passwords[role], salts[role]);
+        const encrypted = await codec.encodeWithHashedPassword(plain, keys.roles[role].hash);
         files[role + ".html"] = page(role, {
             staticryptEncryptedMsgUniqueVariableName: encrypted,
             staticryptSaltUniqueVariableName: salts[role],
@@ -84,6 +131,7 @@ async function build({ source, passwords, output = ROOT }) {
     files["staff-salts.json"] = JSON.stringify(salts, null, 2) + "\n";
     files["users.html"] = files["technician.html"];
     saveFiles(output, files);
+    if (passwords && keyPath) saveKeys(keyPath, keys);
 }
 
 async function main() {
@@ -95,11 +143,12 @@ async function main() {
     const input = JSON.parse(fs.readFileSync(0, "utf8"));
     await build(input);
     console.log("Encrypted Technician and Admin pages built. No passwords were saved.");
+    if (input.passwords && input.keyFile) console.log("Private encryption keys saved for future rebuilds.");
 }
 
 module.exports = { build, loadTools, page };
 if (require.main === module) main().catch(() => {
     // Do not print inputs or a child-process command containing credentials.
-    console.error("Staff build failed. Check the private manifest, distinct passwords and installed dependencies. Existing pages may need rebuilding before publication.");
+    console.error("Build failed. Check the private manifest, installed dependencies and private key file. If keys are missing or outdated, run set_staff_passwords.py again. Check generated pages before publishing.");
     process.exitCode = 1;
 });

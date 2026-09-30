@@ -68,3 +68,43 @@ test("invalid access and source traversal are rejected before writing", () => {
         assert.throws(() => loadTools(source), /leave/);
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
+
+test("private saved keys rebuild without passwords and reject stale or public keys", async () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "tvc-private-keys-test-"));
+    try {
+        const source = path.join(temp, "source");
+        const output = path.join(temp, "output");
+        const keyFile = path.join(temp, "keys", "build-keys.json");
+        fs.cpSync(path.join(root, "examples/staff"), source, { recursive: true });
+        await build({ source, output, passwords, keyFile });
+        const saved = fs.readFileSync(keyFile, "utf8");
+        assert(!saved.includes(passwords.admin) && !saved.includes(passwords.technician));
+        if (process.platform !== "win32") {
+            assert.equal(fs.statSync(keyFile).mode & 0o777, 0o600);
+            assert.equal(fs.statSync(path.dirname(keyFile)).mode & 0o777, 0o700);
+        }
+        fs.appendFileSync(path.join(source, "admin-demo.html"), "<!-- revised private content -->", "utf8");
+        await build({ source, output, keyFile });
+        assert((await unlock(config(output, "admin"), passwords.admin)).decoded.includes("revised private content"));
+        assert(!(await unlock(config(output, "technician"), passwords.technician)).decoded.includes("revised private content"));
+        for (const role of ["admin", "technician"]) {
+            const html = fs.readFileSync(path.join(output, role + ".html"), "utf8");
+            assert(!html.includes(JSON.parse(saved).roles[role].hash));
+        }
+        await assert.rejects(build({ source, output, passwords, keyFile: path.join(root, "build-keys.json") }), /outside/);
+        await assert.rejects(build({ source, output, passwords, keyFile: path.join(output, "build-keys.json") }), /outside/);
+        if (process.platform !== "win32") {
+            fs.chmodSync(keyFile, 0o644);
+            await assert.rejects(build({ source, output, keyFile }), /owner/);
+            fs.chmodSync(keyFile, 0o600);
+        }
+        // A password change elsewhere must not silently republish using an old key.
+        await build({ source, output, passwords: { ...passwords, admin: "changed-key-test-password" } });
+        const before = fs.readFileSync(path.join(output, "admin.html"), "utf8");
+        await assert.rejects(build({ source, output, keyFile }), /no longer unlock/);
+        assert.equal(fs.readFileSync(path.join(output, "admin.html"), "utf8"), before);
+        await build({ source, output, passwords: { ...passwords, admin: "changed-key-test-password" }, keyFile });
+        await build({ source, output, keyFile });
+        assert((await unlock(config(output, "admin"), "changed-key-test-password")).success);
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
