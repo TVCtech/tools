@@ -312,7 +312,7 @@
     </div>
     <div class="custom-tee" id="customTeeFields" hidden>
       <label for="customTeeHeight">T-spacer height (mm)</label>
-      <input type="number" id="customTeeHeight" value="90" min="40" step="1" aria-describedby="customTeeError" />
+      <input type="number" id="customTeeHeight" value="90" min="90" step="1" aria-describedby="customTeeError" />
       <p class="custom-tee-error" id="customTeeError" role="status" hidden></p>
     </div>
   </fieldset>
@@ -378,10 +378,10 @@
 
   function getSpacerStack(targetMm, kit = 'original', customHeight = 90) {
     const rounded = Math.round(targetMm);
-    const useCustom = kit === 'custom' && rounded >= 40;
+    const useCustom = kit === 'custom' && rounded >= 90;
     if (useCustom) {
-      if (!Number.isSafeInteger(customHeight) || customHeight < 40) {
-        throw new Error('Enter a whole height of at least 40 mm: 25 mm top + 15 mm bottom.');
+      if (!Number.isSafeInteger(customHeight) || customHeight < 90) {
+        throw new Error('Enter a whole T-spacer height of at least 90 mm.');
       }
       if (customHeight > rounded) {
         throw new Error(`The custom T spacer must fit within the ${rounded} mm stack.`);
@@ -550,7 +550,7 @@
 
     // Spacer stack breakdown
     const roundedStack = Math.round(S);
-    document.getElementById('kitPanel').hidden = roundedStack < 40;
+    document.getElementById('kitPanel').hidden = roundedStack < 90;
     document.getElementById('customTeeFields').hidden = selectedKit !== 'custom';
     for (const button of document.querySelectorAll('.kit-option')) {
       button.disabled = roundedStack < 90 && (button.dataset.kit === 'plain' || button.dataset.kit === 'tee');

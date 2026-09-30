@@ -143,7 +143,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 # The 90 mm choice follows the actual rounded stack. Below that
                 # threshold the original kit is used even after selecting T.
                 page.locator('#pipeDia').fill('341.1')
-                expect(page.locator('#kitPanel')).to_be_visible()
+                expect(page.locator('#kitPanel')).to_be_hidden()
                 expect(page.locator('[data-kit=tee]')).to_be_disabled()
                 expect(page.locator('#boltValue')).to_have_text('M8 × 115')
                 expect(page.locator('.t-spacer')).to_have_count(0)
@@ -184,11 +184,11 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                                  ['90 mm T','2','12','18'])
                 page.locator('[data-kit=custom]').click()
                 expect(page.locator('#customTeeFields')).to_be_visible()
-                page.locator('#customTeeHeight').fill('60')
-                expect(page.locator('#boltValue')).to_have_text('M8 × 165')
+                page.locator('#customTeeHeight').fill('120')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 105')
                 expect(page.locator('.t-spacer')).to_have_count(1)
                 self.assertEqual(page.locator('#comboBody tr').last.locator('td').all_text_contents(),
-                                 ['60 mm T','1','6','9'])
+                                 ['120 mm T','1','6','9'])
                 geometry=page.locator('#assemblySvg').evaluate('''svg=>{
                     const t=svg.querySelector('.t-spacer'),wheel=svg.querySelector('#wheelImage'),bolt=svg.querySelector('#boltShaft');
                     const a=(el,k)=>Number(el.getAttribute(k));
@@ -196,27 +196,29 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                     return {scale:a(wheel,'width')/63,y:a(t,'y'),height:a(t,'height'),vertical,
                         tip:a(bolt,'y')+a(bolt,'height'),entry:Number(svg.dataset.threadEntry)};
                 }''')
-                self.assertAlmostEqual(geometry['height'],60*geometry['scale'])
+                self.assertAlmostEqual(geometry['height'],120*geometry['scale'])
                 self.assertAlmostEqual(geometry['vertical'][0],25*geometry['scale'])
                 self.assertAlmostEqual(geometry['height']-geometry['vertical'][1],15*geometry['scale'])
                 self.assertAlmostEqual(geometry['entry'],geometry['y'])
                 self.assertAlmostEqual(geometry['tip']-geometry['y'],17.5*geometry['scale'])
                 self.assertLess(geometry['tip'],geometry['y']+25*geometry['scale'])
-                # A custom T must remain usable below the 90 mm-kit threshold.
-                page.locator('#pipeDia').fill('312.3')  # 75 mm: custom 60 + 10 + 5
-                expect(page.locator('[data-kit=tee]')).to_be_disabled()
-                expect(page.locator('[data-kit=custom]')).to_be_enabled()
-                expect(page.locator('#boltValue')).to_have_text('M8 × 40')
-                expect(page.locator('.t-spacer')).to_have_count(1)
+                # No kit selector or T spacer is used below the 90 mm threshold.
+                page.locator('#pipeDia').fill('312.3')  # 75 mm stack
+                expect(page.locator('#kitPanel')).to_be_hidden()
+                expect(page.locator('#boltValue')).to_have_text('M8 × 100')
+                expect(page.locator('.t-spacer')).to_have_count(0)
+                page.locator('#pipeDia').fill('562.3')
+                expect(page.locator('#kitPanel')).to_be_visible()
+                expect(page.locator('#boltValue')).to_have_text('M8 × 105')
                 # Too-short, fractional, absent or too-tall custom sizes clear
                 # the old result; the same input can recover without a popup.
-                for value in ['39','60.5','','76']:
+                for value in ['89','120.5','','201']:
                     page.locator('#customTeeHeight').fill(value)
                     expect(page.locator('#customTeeError')).to_be_visible()
                     expect(page.locator('#assemblyPanel')).to_be_hidden()
                     expect(page.locator('#comboPanel')).to_be_hidden()
                     expect(page.locator('#boltValue')).to_have_text('—')
-                page.locator('#customTeeHeight').fill('60')
+                page.locator('#customTeeHeight').fill('120')
                 expect(page.locator('#customTeeError')).to_be_hidden()
                 expect(page.locator('#assemblyPanel')).to_be_visible()
                 for dimensions in [{'width':1000,'height':1100},{'width':390,'height':844}]:

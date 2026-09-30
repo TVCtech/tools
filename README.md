@@ -7,7 +7,7 @@ and has a **Login** link at the top left.
 
 `Calsis160WheelSpacerCalc.html` includes a live SVG side view using the owner's
 wheel/bracket, thread and 90 mm T-spacer captures. Four clickable kit pictures
-appear when the **rounded fitted stack** reaches 40 mm:
+appear when the **rounded fitted stack** reaches 90 mm:
 
 - **Original kit:** 40, 20, 10, 5, 3 and 1 mm spacers.
 - **Plain 90 mm:** adds through-hole 90 mm spacers, including multiples where
@@ -17,15 +17,13 @@ appear when the **rounded fitted stack** reaches 40 mm:
   uppermost T's tapped section; separate mounting bolts are omitted.
 - **Custom T:** enter one custom T-spacer height in whole millimetres. Exactly
   one custom T is used, with smaller spacers above it. The tapped top is fixed
-  at 25 mm and the untapped bottom at 15 mm; the middle varies, so the minimum
-  total height is 40 mm. Custom height must fit inside the required stack.
+  at 25 mm and the untapped bottom at 15 mm; the middle varies. Custom T spacers
+  must be at least 90 mm tall. Custom height must fit inside the required stack.
 
 The original kit is the initial choice. A selected kit is retained within the
-page; below 40 mm all calculations use the smaller spacers, and the retained
-choice returns when the stack reaches 40 mm again. The two standard 90 mm
-options are disabled below a 90 mm fitted stack; a shorter custom T can still
-be selected. Below 90 mm a retained standard 90 mm kit also uses the smaller
-spacers. The table, bolt result and drawing update together. Rounding to the
+page; below 90 mm all calculations use the smaller spacers, and the retained
+choice returns when the stack reaches 90 mm again. The kit selector is hidden below
+90 mm; this applies to custom T spacers as well. The table, bolt result and drawing update together. Rounding to the
 nearest whole millimetre is preserved. Invalid custom entries clear the prior
 result and show an inline message; no popup is used.
 
