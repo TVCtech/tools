@@ -38,6 +38,7 @@
         $("viewer").hidden = true;
         $("login-panel").hidden = false;
         $("password").value = "";
+        setPasswordVisible(false);
         $("login-button").disabled = !config.encrypted;
     }
     function remoteLogout() {
@@ -53,7 +54,7 @@
         write("localStorage", epochKey, String(Date.now()) + Math.random());
         channel?.postMessage("logout");
         remoteLogout();
-        location.replace("staff.html?logged-out=1");
+        location.replace("users.html?logged-out=1");
     }
     $("logout")?.addEventListener("click", logout);
     try {
@@ -74,6 +75,15 @@
     }
     if (!config) return;
 
+    function setPasswordVisible(visible) {
+        $("password").type = visible ? "text" : "password";
+        $("show-password").textContent = visible ? "Hide" : "Show";
+        $("show-password").setAttribute("aria-label", visible ? "Hide password" : "Show password");
+        $("show-password").setAttribute("aria-pressed", String(visible));
+    }
+    $("show-password").addEventListener("click", () => {
+        setPasswordVisible($("password").type === "password");
+    });
     $("role").value = config.role;
     $("role").addEventListener("change", () => {
         lock();
@@ -158,7 +168,7 @@
     }
     async function restore() {
         if (!config.encrypted) {
-            $("login-message").textContent = "Staff access is being set up. Passwords have not been configured yet.";
+            $("login-message").textContent = "User access is being set up. Passwords have not been configured yet.";
             return;
         }
         if (!window.isSecureContext || !window.crypto?.subtle || !window.staticryptInitiator) {

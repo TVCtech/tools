@@ -30,6 +30,7 @@ test("encrypted role boundaries, admin inheritance, retained salts and password 
         await build({ source, output, passwords });
         const technician = config(output, "technician");
         const admin = config(output, "admin");
+        assert.equal(fs.readFileSync(path.join(output, "users.html"), "utf8"), fs.readFileSync(path.join(output, "technician.html"), "utf8"));
         assert.deepEqual(JSON.parse((await unlock(technician, passwords.technician)).decoded).tools.map(t => t.id), ["technician-demo"]);
         assert.deepEqual(JSON.parse((await unlock(admin, passwords.admin)).decoded).tools.map(t => t.id), ["technician-demo", "admin-demo"]);
         assert.equal((await unlock(admin, passwords.technician)).success, false);

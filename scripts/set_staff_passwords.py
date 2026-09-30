@@ -1,4 +1,4 @@
-"""Privately prompt for role passwords and build encrypted staff pages."""
+"""Privately prompt for role passwords and build encrypted user pages."""
 import argparse
 import getpass
 import json
@@ -57,7 +57,7 @@ def main():
         return result.returncode
     print("Ready for local testing. Nothing has been pushed or published.")
     print("Run: python3 -m http.server 8000 --bind 127.0.0.1")
-    print("Then open http://localhost:8000/staff.html on this machine.")
+    print("Then open http://localhost:8000/users.html on this machine.")
     return 0
 
 

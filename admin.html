@@ -5,20 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Admin · TVC Tools</title>
-  <link rel="stylesheet" href="assets/staff.css">
+  <link rel="stylesheet" href="assets/staff.css?v=2">
   <script src="assets/staticrypt.js" defer></script>
-  <script src="assets/staff.js" defer></script>
+  <script src="assets/staff.js?v=2" defer></script>
 </head>
 <body>
-  <header><a href="staff.html">Staff login</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
+  <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
   <p id="notice" role="status"></p>
   <main id="login-panel">
-    <h1>Admin login</h1>
+    <h1>Users</h1>
     <form id="login-form" class="card">
       <label for="role">User</label>
       <select id="role"><option value="technician">Technician</option><option value="admin">Admin</option></select>
       <label for="password">Password</label>
-      <input id="password" type="password" autocomplete="current-password" required>
+      <div class="password-entry">
+        <input id="password" type="password" autocomplete="current-password" required>
+        <button id="show-password" type="button" aria-label="Show password" aria-controls="password" aria-pressed="false">Show</button>
+      </div>
       <label class="remember"><input id="remember" type="checkbox">Remember this browser</label>
       <button id="login-button" type="submit" class="primary" disabled>Login</button>
       <p class="message" id="login-message" role="status" aria-live="polite">Preparing login…</p>
@@ -32,7 +35,7 @@
   </main>
   <section id="viewer" hidden aria-label="Selected tool">
     <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
-    <iframe id="tool-frame" title="Staff tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
+    <iframe id="tool-frame" title="User tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
   </section>
   <script id="staff-config" type="application/json">{"role":"admin","encrypted":{"staticryptEncryptedMsgUniqueVariableName":"500e1035cd5f5b69739317b0ed8caa867d52e57c10e5c2e42cc7ee594b30e755ba7d6afde6f576d6f536a7c8f8192bb417f8e777c429c2838bd23b89b48878da218ba9c0e257cec41d9154fe6aace4d942205fe04d542443ad412a0899f21ac3f2a6034531ecc7a3a3921b1423c01c2ba12d35365923b62f2d5f51b5caede14ed924b244c79614356947a013156231454f38a8ae675a385c1ba8ca6bbef189cd85ec042a8113936966546bb4e6fe5dfbbe0e5c6527e6c4d742a30b1565c1c5fddd7753986b7321bf6c275b071d1da4c5dc68210a3acd33156a31ae6e5ff853414cc712c71514a30972f7a38632c428c611f77a22e74e03a57224e12f62f76ec0ff2d4cb0f70ad9213a093a75475eff06e33fb656f0a190bebd9c0d414dfa2098bb01e7850b28f8d54d90c435417939d03e917a1087bea71e082e7bd78dcfd2af12ef4a9ec20ed4606b74ad2559c9d9e198cfb077bd5a0a836dc33583dccf255813c26692f1fa7883a4f9a500350f1d2051bffbc22042eaa4b92a00375cfb8caeca1cd70c6a450f50257a9f0d6e96eb7502a542ae38f63c4803f66b702d61c640aadcec513cda0a956a0798af3f9e1479f23b4ce307a428e616487763f14bd3d76ff58f632d3a78f0ac653a724d2122e5275058f45c5f561e5c78ef0ea6f4e0fcc11c2180fe3d4cbf414287188df962fb3f448eefa43dbbddf7d58c6e7755194067efe75aace834a71a2b6b97c64d1567b13ac5c4789c8199a76da195498b84510189463dc7baa73c48f73b0ed3b43d7976eb3ddc8e0a090540ea1a078b355fdfb8e0448d6b6dcb00b49cae35f0cd5f9c9b13f3ea0fbdc5bf527218f551d8ad5ca8d0ccfa4633231d68a916ab75c9cdc8ab683b18d2f148c4d863cb19f294b82884d56a5f625ea9a530bacca6dc9897ba26f4ecb4a031a786da9748a531c70f3c3d6adb75d0a63bd43d3e8b9884844ece17a5533d03a8447674cc5ca7b248471f8f23424a939f191efb0250e0f628e484a5f1d41445bf5ab069e812e4c17f567a5729464f24608b80f56a1fd13e2db15be78414ecec17711a3b94f5d99dee29c9e402efeda8e3d0f611f43a4f170fe7f5a3e31370ce4d87139dfd7b2174ad2cc8a903f9d968fb0d42c7205af33af3a3449b971d290086de220cc92bdb42838f7c4e041053ccae2bede0efdbc0ddd1adfcfed11148c4c25ac846f1a0a91dd9d4c5f0c5842b40cc70ef29cd100554fbd6853e85ce5e1eaeb4e65187d6225d010beb8423da409b699c77db4ea7497dd1b26eb32cd26c640eb3cbd747a07cc327fb63208b83630cf8d7bfa22aa744ca421513e59de4a723a44228917b6eb9da6cd4bb82e18e8e53831be6b0cce785f5db32daccbd8a8f2a818cd26aaf78a9c7eda4180a3d24207fbf27d80de688a8054509f73eccfbbdd0d58f6f1d2792ab65c04096ae1d9f1abb604e29f31e688ed31fd413f277ac29a0c848d7fd6ba31788926541783843d28a0e50d402f6c7c02ab3e4a5a9b6c4d6e9943c329437177fa6cfea28265499658eeecd27218b37748159b9463869567889b45743c9c093df8551d8250fbe3b0c30fad261fbc887350916da526fac034b8e1d592df9f8a740bbe55ad6d271b62e22bfdf6e3764a6b4d8e74e6ac3207c5b06efcfbb60cd3eb690e9025804e2c5f8d099b1f8d54f04c759de8f1478d08703405c6b170e5606be2ab3c0fd3078fe248db68b823aa9df96e518724d698012eb86a6ebce367fc4888c7c57a9081ea7b1e12778aa276fac661bbf695ad633ed15e24cf2f5d060c21316ae91bb37744f312e9b6f046dc93e98ee4327d2","staticryptSaltUniqueVariableName":"4c13c487effc2595b5db93f382f2ee40","isRememberEnabled":false,"rememberDurationInDays":0}}</script>
 </body>

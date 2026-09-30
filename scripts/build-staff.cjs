@@ -82,13 +82,14 @@ async function build({ source, passwords, output = ROOT }) {
         });
     }
     files["staff-salts.json"] = JSON.stringify(salts, null, 2) + "\n";
+    files["users.html"] = files["technician.html"];
     saveFiles(output, files);
 }
 
 async function main() {
     if (process.argv[2] === "--prepare") {
         if (ROLES.some((role) => fs.existsSync(path.join(ROOT, role + ".html")))) throw new Error("Role pages already exist; preparation will not overwrite them.");
-        saveFiles(ROOT, { ...assets(), ...Object.fromEntries(ROLES.map((role) => [role + ".html", page(role, null)])) });
+        saveFiles(ROOT, { ...assets(), "users.html": page("technician", null), ...Object.fromEntries(ROLES.map((role) => [role + ".html", page(role, null)])) });
         return;
     }
     const input = JSON.parse(fs.readFileSync(0, "utf8"));

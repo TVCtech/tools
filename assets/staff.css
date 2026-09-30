@@ -10,11 +10,11 @@ h1 { margin-bottom: 8px; }
 p { line-height: 1.6; }
 .muted { color: #5a6470; }
 .card { background: white; border: 1px solid #d8dde3; border-radius: 8px; padding: 24px; margin: 16px 0; }
-.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-.choices a { display: block; text-decoration: none; }
-.choices h2 { margin-top: 0; }
 label { display: block; margin: 20px 0 8px; }
-input[type=password], select { width: 100%; padding: 12px; font: inherit; border: 1px solid #a5afbb; border-radius: 5px; }
+input[type=password], input[type=text], select { width: 100%; padding: 12px; font: inherit; border: 1px solid #a5afbb; border-radius: 5px; }
+.password-entry { position: relative; }
+.password-entry input { padding-right: 80px; }
+.password-entry button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 6px 10px; font-size: .85rem; }
 .remember { display: flex; align-items: center; gap: 10px; margin: 20px 0; }
 .remember input { width: 18px; height: 18px; }
 button { cursor: pointer; border: 1px solid #b4bdc8; border-radius: 5px; background: white; padding: 10px 16px; font: inherit; color: #1a1f2b; }
