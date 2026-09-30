@@ -6,34 +6,46 @@ and has a **Login** link at the top left.
 ## CALSIS wheel and spacer assembly
 
 `Calsis160WheelSpacerCalc.html` includes a live SVG side view using the owner's
-wheel/bracket, thread and 90 mm T-spacer captures. Three clickable kit pictures
-appear when the **rounded fitted stack** reaches 90 mm:
+wheel/bracket, thread and 90 mm T-spacer captures. Four clickable kit pictures
+appear when the **rounded fitted stack** reaches 40 mm:
 
 - **Original kit:** 40, 20, 10, 5, 3 and 1 mm spacers.
 - **Plain 90 mm:** adds through-hole 90 mm spacers, including multiples where
   needed. Wheel bolts pass through the complete stack.
-- **90 mm T:** one T spacer against the unit, with the remaining height made
-  from the smaller spacers above it. Wheel bolts engage in the T's 25 mm tapped
-  top section; its separate mounting bolts are omitted from the drawing.
+- **90 mm T:** uses as many 90 mm T spacers as fit, with the remaining height
+  made from smaller spacers above the uppermost T. Wheel bolts engage in that
+  uppermost T's tapped section; separate mounting bolts are omitted.
+- **Custom T:** enter one custom T-spacer height in whole millimetres. Exactly
+  one custom T is used, with smaller spacers above it. The tapped top is fixed
+  at 25 mm and the untapped bottom at 15 mm; the middle varies, so the minimum
+  total height is 40 mm. Custom height must fit inside the required stack.
 
 The original kit is the initial choice. A selected kit is retained within the
-page; below 90 mm all calculations use the smaller spacers, and the retained
-choice returns when the stack reaches 90 mm again. The table, bolt result and
-drawing update together. Rounding to the nearest whole millimetre is preserved.
+page; below 40 mm all calculations use the smaller spacers, and the retained
+choice returns when the stack reaches 40 mm again. The two standard 90 mm
+options are disabled below a 90 mm fitted stack; a shorter custom T can still
+be selected. Below 90 mm a retained standard 90 mm kit also uses the smaller
+spacers. The table, bolt result and drawing update together. Rounding to the
+nearest whole millimetre is preserved. Invalid custom entries clear the prior
+result and show an inline message; no popup is used.
 
 Bolt engagement uses the actual fitted stack and the existing 7.5 mm
 bracket/washer allowance, with 5 mm minimum and owner-selected 20 mm maximum.
-Bolt sizes remain 5 mm increments. For T spacers only the blocks **above the T**
-are added to the clearance length. A 100 mm stack therefore uses an M8 × 125
+Bolt sizes remain 5 mm increments. For T spacers only the blocks **above the
+uppermost T** are added to the clearance length. A 100 mm stack therefore uses an M8 × 125
 bolt with the original/plain kit, or M8 × 35 with a 90 mm T plus 10 mm spacer;
-both give 17.5 mm engagement. These limits are calculation inputs, not an
+both give 17.5 mm engagement. A 200 mm stack using two standard 90 mm T
+spacers plus 20 mm uses M8 × 45, again with 17.5 mm engagement. These limits
+are calculation inputs, not an
 independent verification of the hardware's thread strength or clearance.
 
 Supplied drawing dimensions: bracket width 63 mm, assembly height 31.9 mm,
 wheel diameter 29.8 mm, rectangular spacer width 63.5 mm. Individual spacer
 heights and thread engagement share one physical scale. The T-spacer drawing
-marks engagement inside its top section; through-hole kits show thread below
-the stack. The bolt image is
+marks engagement inside the uppermost T section; through-hole kits show thread
+below the stack. Blue engagement annotations are on the left, with spacer
+labels on the right. Custom T profiles are schematic SVGs with the fixed
+25 mm top and 15 mm bottom, rather than stretched copies of the 90 mm capture. The bolt image is
 registered under the left socket head; its 8 mm-wide/20 mm-long thread texture
 is repeated and clipped, so changing bolt length does not stretch the pitch.
 For more than 80 blocks, the drawing shows a combined stack and retains the
@@ -52,10 +64,11 @@ python3 -m unittest discover -s tests -p test_wheel_spacer_browser.py -v
 ```
 
 They check actual-stack rounding, image loading, per-block dimensions, bolt
-origin/length and engagement, all three kits (90/100/144/180 mm examples),
-short T screws within the tapped section, selector threshold and keyboard
-selection, invalid-input clearing, mobile and print layout, and retention of
-the original upload.
+origin/length and engagement, standard kits (90/100/144/180/200 mm examples),
+stacked standard T spacers, the single-custom-T rule, fixed custom top/bottom
+geometry, short T screws within the tapped section, selector thresholds and
+keyboard selection, custom validation and recovery, left-hand label placement,
+mobile and print layout, and retention of the original upload.
 
 ## Stock Cut plan
 

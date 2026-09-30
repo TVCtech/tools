@@ -92,7 +92,7 @@ class WheelSpacerBrowserTests(unittest.TestCase):
             finally:
                 browser.close()
 
-    def test_three_kits_shorter_t_screws_and_threshold(self):
+    def test_standard_kits_stacked_t_screws_and_threshold(self):
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path='/usr/bin/chromium', headless=True)
             try:
@@ -101,12 +101,12 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.goto((ROOT / 'Calsis160WheelSpacerCalc.html').as_uri())
                 # Hand-calculated examples exercise both 90 mm types, thin
-                # spacers, repeated plain 90s, and one T plus smaller blocks.
+                # spacers, repeated plain 90s, and stacked T spacers.
                 cases = [
                     ('342.3', 90, 115, {'original':[40,40,10], 'plain':[90], 'tee':[90]}),
                     ('362.3', 100, 125, {'original':[40,40,20], 'plain':[90,10], 'tee':[10,90]}),
                     ('450.3', 144, 170, {'original':[40,40,40,20,3,1], 'plain':[90,40,10,3,1], 'tee':[40,10,3,1,90]}),
-                    ('522.3', 180, 205, {'original':[40,40,40,40,20], 'plain':[90,90], 'tee':[40,40,10,90]}),
+                    ('522.3', 180, 205, {'original':[40,40,40,40,20], 'plain':[90,90], 'tee':[90,90]}),
                 ]
                 # For 180 mm: clearance 187.5, longest allowed bolt is 205.
                 for diameter, stack, full_bolt, choices in cases:
@@ -115,7 +115,8 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                     for kit, pieces in choices.items():
                         with self.subTest(stack=stack, kit=kit):
                             page.locator(f'[data-kit="{kit}"]').click()
-                            bolt = full_bolt - (90 if kit == 'tee' else 0)
+                            t_total = (stack // 90) * 90 if kit == 'tee' else 0
+                            bolt = full_bolt - t_total
                             engagement = full_bolt - stack - 7.5
                             expect(page.locator('#boltValue')).to_have_text(f'M8 × {bolt}')
                             expect(page.locator(f'[data-kit="{kit}"]')).to_have_attribute('aria-pressed','true')
@@ -127,7 +128,6 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                             self.assertGreaterEqual(engagement,5)
                             if kit == 'tee':
                                 expect(page.locator('#comboBody')).to_contain_text('90 mm T')
-                                expect(page.locator('#assemblyExplanation')).to_contain_text('25 mm tapped top')
                                 geometry = page.locator('#assemblySvg').evaluate('''svg => {
                                     const wheel=svg.querySelector('#wheelImage'),t=svg.querySelector('.t-spacer'),bolt=svg.querySelector('#boltShaft');
                                     const attr=(el,k)=>Number(el.getAttribute(k));
@@ -136,14 +136,15 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                                         bracketBottom:attr(wheel,'y')+attr(wheel,'height')};
                                 }''')
                                 self.assertAlmostEqual(geometry['tH'],90*geometry['scale'])
-                                self.assertAlmostEqual(geometry['tY'],geometry['bracketBottom']+(stack-90)*geometry['scale'])
+                                self.assertAlmostEqual(geometry['tY'],geometry['bracketBottom']+(stack-t_total)*geometry['scale'])
                                 self.assertAlmostEqual(geometry['entry'],geometry['tY'])
                                 self.assertAlmostEqual(geometry['tip']-geometry['tY'],engagement*geometry['scale'])
                                 self.assertLess(geometry['tip'],geometry['tY']+25*geometry['scale'])
                 # The 90 mm choice follows the actual rounded stack. Below that
                 # threshold the original kit is used even after selecting T.
                 page.locator('#pipeDia').fill('341.1')
-                expect(page.locator('#kitPanel')).to_be_hidden()
+                expect(page.locator('#kitPanel')).to_be_visible()
+                expect(page.locator('[data-kit=tee]')).to_be_disabled()
                 expect(page.locator('#boltValue')).to_have_text('M8 × 115')
                 expect(page.locator('.t-spacer')).to_have_count(0)
                 page.locator('#pipeDia').fill('341.3')
@@ -163,6 +164,76 @@ class WheelSpacerBrowserTests(unittest.TestCase):
                     page.locator('#pipeDia').fill(value)
                     expect(page.locator('#kitPanel')).to_be_hidden()
                     expect(page.locator('#assemblyPanel')).to_be_hidden()
+                self.assertEqual(errors,[])
+            finally:
+                browser.close()
+
+    def test_custom_t_once_fixed_top_and_bottom_and_left_labels(self):
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(executable_path='/usr/bin/chromium', headless=True)
+            try:
+                page=browser.new_page(viewport={'width':1000,'height':1100})
+                errors=[]
+                page.on('pageerror',lambda error:errors.append(str(error)))
+                page.goto((ROOT/'Calsis160WheelSpacerCalc.html').as_uri())
+                page.locator('#pipeDia').fill('562.3')  # 200 mm stack
+                page.locator('[data-kit=tee]').click()
+                expect(page.locator('#boltValue')).to_have_text('M8 × 45')
+                expect(page.locator('.t-spacer')).to_have_count(2)
+                self.assertEqual(page.locator('#comboBody tr').nth(1).locator('td').all_text_contents(),
+                                 ['90 mm T','2','12','18'])
+                page.locator('[data-kit=custom]').click()
+                expect(page.locator('#customTeeFields')).to_be_visible()
+                page.locator('#customTeeHeight').fill('60')
+                expect(page.locator('#boltValue')).to_have_text('M8 × 165')
+                expect(page.locator('.t-spacer')).to_have_count(1)
+                self.assertEqual(page.locator('#comboBody tr').last.locator('td').all_text_contents(),
+                                 ['60 mm T','1','6','9'])
+                geometry=page.locator('#assemblySvg').evaluate('''svg=>{
+                    const t=svg.querySelector('.t-spacer'),wheel=svg.querySelector('#wheelImage'),bolt=svg.querySelector('#boltShaft');
+                    const a=(el,k)=>Number(el.getAttribute(k));
+                    const vertical=[...t.querySelector('path').getAttribute('d').matchAll(/V ([0-9.]+)/g)].map(m=>Number(m[1]));
+                    return {scale:a(wheel,'width')/63,y:a(t,'y'),height:a(t,'height'),vertical,
+                        tip:a(bolt,'y')+a(bolt,'height'),entry:Number(svg.dataset.threadEntry)};
+                }''')
+                self.assertAlmostEqual(geometry['height'],60*geometry['scale'])
+                self.assertAlmostEqual(geometry['vertical'][0],25*geometry['scale'])
+                self.assertAlmostEqual(geometry['height']-geometry['vertical'][1],15*geometry['scale'])
+                self.assertAlmostEqual(geometry['entry'],geometry['y'])
+                self.assertAlmostEqual(geometry['tip']-geometry['y'],17.5*geometry['scale'])
+                self.assertLess(geometry['tip'],geometry['y']+25*geometry['scale'])
+                # A custom T must remain usable below the 90 mm-kit threshold.
+                page.locator('#pipeDia').fill('312.3')  # 75 mm: custom 60 + 10 + 5
+                expect(page.locator('[data-kit=tee]')).to_be_disabled()
+                expect(page.locator('[data-kit=custom]')).to_be_enabled()
+                expect(page.locator('#boltValue')).to_have_text('M8 × 40')
+                expect(page.locator('.t-spacer')).to_have_count(1)
+                # Too-short, fractional, absent or too-tall custom sizes clear
+                # the old result; the same input can recover without a popup.
+                for value in ['39','60.5','','76']:
+                    page.locator('#customTeeHeight').fill(value)
+                    expect(page.locator('#customTeeError')).to_be_visible()
+                    expect(page.locator('#assemblyPanel')).to_be_hidden()
+                    expect(page.locator('#comboPanel')).to_be_hidden()
+                    expect(page.locator('#boltValue')).to_have_text('—')
+                page.locator('#customTeeHeight').fill('60')
+                expect(page.locator('#customTeeError')).to_be_hidden()
+                expect(page.locator('#assemblyPanel')).to_be_visible()
+                for dimensions in [{'width':1000,'height':1100},{'width':390,'height':844}]:
+                    page.set_viewport_size(dimensions)
+                    bounds=page.locator('#assemblySvg').evaluate('''svg=>{
+                        const labels=[...svg.querySelectorAll('.engagement-label')].map(e=>e.getBoundingClientRect());
+                        const spacer=svg.querySelector('.spacer').getBoundingClientRect();
+                        return {labelRight:Math.max(...labels.map(r=>r.right)),spacerLeft:spacer.left};
+                    }''')
+                    self.assertLess(bounds['labelRight'],bounds['spacerLeft'])
+                    self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                    expect(page.locator('#assemblyExplanation, .assembly-reference')).to_have_count(0)
+                    page.screenshot(path=f"/tmp/wheel-custom-final-{dimensions['width']}.png",full_page=True)
+                page.locator('#pipeDia').fill('200') # stack too short for any T
+                expect(page.locator('#kitPanel')).to_be_hidden()
+                expect(page.locator('#boltValue')).to_have_text('M8 × 45')
+                expect(page.locator('.t-spacer')).to_have_count(0)
                 self.assertEqual(errors,[])
             finally:
                 browser.close()
