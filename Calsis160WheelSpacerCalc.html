@@ -75,7 +75,8 @@
       text-transform: uppercase;
     }
 
-    input[type="number"] {
+    input[type="number"],
+    #pipeDia {
       appearance: textfield;
       -moz-appearance: textfield;
       width: 100%;
@@ -93,7 +94,8 @@
       -webkit-appearance: none;
       margin: 0;
     }
-    input[type="number"]:focus {
+    input[type="number"]:focus,
+    #pipeDia:focus {
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-soft);
@@ -292,7 +294,7 @@
 
   <div class="panel">
     <label for="pipeDia">Pipe Internal Diameter D (mm)</label>
-    <input type="number" id="pipeDia" placeholder="e.g. 467" min="0" step="0.1" />
+    <input type="text" inputmode="decimal" id="pipeDia" placeholder="e.g. 467" />
   </div>
 
   <fieldset class="kit-panel" id="kitPanel" hidden>
@@ -508,7 +510,8 @@
   }
 
   function calculate() {
-    const D = parseFloat(document.getElementById('pipeDia').value);
+    const diameterText = document.getElementById('pipeDia').value.trim();
+    const D = /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(diameterText) ? Number(diameterText) : NaN;
 
     const spacerCard  = document.getElementById('spacerCard');
     const spacerValue = document.getElementById('spacerValue');
