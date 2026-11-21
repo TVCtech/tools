@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Training · TVC Tools</title>
+  <link rel="stylesheet" href="assets/staff.css?v=3">
+  <script src="assets/staticrypt.js" defer></script>
+  <script src="assets/staff.js?v=3" defer></script>
+</head>
+<body>
+  <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
+  <p id="notice" role="status"></p>
+  <main id="login-panel">
+    <h1>Users</h1>
+    <form id="login-form" class="card">
+      <label for="role">Account</label>
+      <select id="role"><option value="technician">Technician</option><option value="admin">Admin</option><option value="ss7">SS7</option><option value="ptl">PTL</option><option value="training">Training</option></select>
+      <label for="password">Password</label>
+      <div class="password-entry">
+        <input id="password" type="password" autocomplete="current-password" required>
+        <button id="show-password" type="button" aria-label="Show password" aria-controls="password" aria-pressed="false">Show</button>
+      </div>
+      <label class="remember"><input id="remember" type="checkbox">Remember this browser</label>
+      <button id="login-button" type="submit" class="primary" disabled>Login</button>
+      <p class="message" id="login-message" role="status" aria-live="polite">Preparing login…</p>
+    </form>
+    <noscript>Enable JavaScript to unlock these tools.</noscript>
+  </main>
+  <main id="tools-panel" hidden>
+    <h1>Training tools</h1>
+    <p class="muted" id="access-label"></p>
+    <div id="tool-list"></div>
+  </main>
+  <section id="viewer" hidden aria-label="Selected tool">
+    <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
+    <iframe id="tool-frame" title="User tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
+  </section>
+  <script id="staff-config" type="application/json">{"role":"technician","account":"training","accountLabel":"Training","accounts":[{"id":"technician","label":"Technician","role":"technician"},{"id":"admin","label":"Admin","role":"admin"},{"id":"ss7","label":"SS7","role":"technician"},{"id":"ptl","label":"PTL","role":"technician"},{"id":"training","label":"Training","role":"technician"}],"encrypted":{"staticryptEncryptedMsgUniqueVariableName":"daede4202402157dc7ebf7cd67a89cc9124152e0aed562de3ec6e700f1bc4db58cf76a6f3037a0a9fa62b07e28dfdc6a54ab4ccf0977521a3f2a046f0d2d96b2733495f5288e0b4544a5fe63e886a13e5152b5b77ebf6114926d62d22b74d6a21cdf5d68fd74373d65622d9391d97dd5e493f46e78bd34b357fb255105135b27250e71842914524451e9bb892dc5e8262d8ebbaa7b3dc0ff2a0fe77d65811eb20e34d00bb7937e56d84d6da43805897b96da474c0363f62dc9b859d079fff2e31b52d57d29f8e47a1928da8a8596f72e2ace48fe15cc353cfacadafe807a3df9f7706ffc995d29199286e764f62d6ce9189a3c4a65624c586ef3c22116425c9e0136a4ae9783eb682dd3e1f95aa1e846bd4d48432d217ccb4d6b3cfc6846bad8a84b1182a882c5715de0c02a5a4e86e1804f6aa82a6536bab3f50a66a45a15b6fbe34fe08de11b487e7d13eaf96d30052c9aa68445897f77a3bc3f9c09dba5aac23a9e3bb1d3362a3d3fe1d5f069d3bd2ce99feb24184039d86e73fb19e3ef534e41643a292c18ee8809d0e575c442437c45cda8a5325edc8502a777e2c3b2d17532512c79f2ee9573acd6b903c0c68dcb10ddf3642c9bc2e14162f197a6ce602d38686a03fe4b22c8ad00327d3b70e908449a1baec1a76a80acc06ed9cc486b0620af1e83152e5dc589ca48855f6f4b7e667babaf586ad275c3f9dd4c7661cdbd31545a8b8eaec1c8a4f0f5a0d78d519b2cc949f59ed58726521aa5f1d4817d60781f34ad0beedd6d9eeedf222b8657215a4c6a0db8ec38d68a0aa2b54bf035548effa9e427e36202692eb8be543c5945eacdd025df26d2cc6a09a457f96000c717e91072f1c84425e109f13a0de8b860f1f1da90eab37e878206c321be65d5255b395c406aba6b7033f60f007d9880db7fde1a5452dcc25c4cfe32eac54abc0f8d3728304a663eb4ce48d24c322d40a9e434fde78676244e911a70e94c9fb3e4c409643d206c5961fce73cce0e00342e361517e8e2fc2985c4cd90b53c7b2d","staticryptSaltUniqueVariableName":"c0ef743eb859458716e5732e35ca4a50","isRememberEnabled":false,"rememberDurationInDays":0}}</script>
+</body>
+</html>

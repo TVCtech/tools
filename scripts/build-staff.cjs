@@ -8,6 +8,10 @@ const codec = require("staticrypt/lib/codec.js").init(cryptoEngine);
 const { buildStaticryptJS } = require("staticrypt/cli/helpers.js");
 const ROOT = path.resolve(__dirname, "..");
 const ROLES = ["technician", "admin"];
+const DEFAULT_ACCOUNTS = [
+    { id: "technician", label: "Technician", role: "technician" },
+    { id: "admin", label: "Admin", role: "admin" },
+];
 
 function inside(parent, child) {
     const relative = path.relative(parent, child);
@@ -31,10 +35,41 @@ function loadTools(source) {
     });
 }
 
-function page(role, encrypted) {
+function escapeHtml(value) {
+    return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function accountList(output) {
+    const filename = path.join(output, "staff-accounts.json");
+    if (!fs.existsSync(filename)) return DEFAULT_ACCOUNTS.map(account => ({ ...account }));
+    const record = JSON.parse(fs.readFileSync(filename, "utf8"));
+    if (record.version !== 1 || !Array.isArray(record.accounts)) throw new Error("Unsupported account list.");
+    const ids = new Set();
+    for (const account of record.accounts) {
+        if (!validAccount(account) || ids.has(account.id)) throw new Error("Invalid account list.");
+        ids.add(account.id);
+    }
+    for (const required of DEFAULT_ACCOUNTS) {
+        const account = record.accounts.find(entry => entry.id === required.id);
+        if (!account || account.role !== required.role || account.label !== required.label) throw new Error("Existing roles must remain available.");
+    }
+    return record.accounts;
+}
+
+function validAccount(account) {
+    if (!account || typeof account.id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(account.id) ||
+        ["users", "staff", "index"].includes(account.id) ||
+        typeof account.label !== "string" || !account.label.trim() || account.label.length > 80) return false;
+    // Companies inherit Technician access; the existing Admin is the only Admin account.
+    return account.role === (account.id === "admin" ? "admin" : "technician");
+}
+
+function page(role, encrypted, account = DEFAULT_ACCOUNTS.find(entry => entry.id === role), accounts = DEFAULT_ACCOUNTS) {
     return fs.readFileSync(path.join(__dirname, "staff-page.html"), "utf8")
-        .replaceAll("@@TITLE@@", role === "admin" ? "Admin" : "Technician")
-        .replace("@@CONFIG@@", JSON.stringify({ role, encrypted }).replaceAll("<", "\\u003c"));
+        .replaceAll("@@TITLE@@", escapeHtml(account.label))
+        .replace("@@ACCOUNTS@@", accounts.map(entry => `<option value="${entry.id}">${escapeHtml(entry.label)}</option>`).join(""))
+        .replace("@@CONFIG@@", JSON.stringify({ role, account: account.id, accountLabel: account.label, accounts, encrypted }).replaceAll("<", "\\u003c"));
 }
 
 function assets() {
@@ -45,7 +80,7 @@ function assets() {
 }
 
 function saveFiles(output, files) {
-    // Finish encryption of both roles before touching either published file.
+    // Finish encryption of every account before touching any published file.
     for (const [name, content] of Object.entries(files)) {
         const target = path.join(output, name);
         fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -84,54 +119,82 @@ function saveKeys(filename, record) {
     }
 }
 
-async function build({ source, passwords, keyFile, output = ROOT }) {
+async function build({ source, passwords, keyFile, output = ROOT, companyAccounts = [] }) {
     if (passwords) {
         if (ROLES.some((role) => typeof passwords[role] !== "string" || !passwords[role])) throw new Error("Both passwords are required.");
         if (passwords.admin === passwords.technician) throw new Error("Use different passwords for Admin and Technician.");
     } else if (!keyFile) throw new Error("Passwords or a private key file are required.");
     const keyPath = keyFile ? privateKeyPath(keyFile, output) : null;
     const tools = loadTools(source);
+    const existingAccounts = accountList(output);
+    const accounts = existingAccounts.map(account => ({ ...account }));
+    const newPasswords = new Set();
+    for (const account of companyAccounts) {
+        if (!validAccount({ ...account, role: "technician" }) || ROLES.includes(account.id) ||
+            typeof account.password !== "string" || account.password.length < 16 || newPasswords.has(account.password)) {
+            throw new Error("Company accounts need valid unique names and different passwords of at least 16 characters.");
+        }
+        if (accounts.some(existing => existing.id === account.id)) throw new Error("Account already exists; creating an account must not change its password.");
+        if (fs.existsSync(path.join(output, account.id + ".html"))) throw new Error("New account page would replace an existing file.");
+        newPasswords.add(account.password);
+        accounts.push({ id: account.id, label: account.label, role: "technician" });
+    }
+    if (companyAccounts.length && !keyPath) throw new Error("Company accounts require a private key file for future rebuilds.");
     const saltPath = path.join(output, "staff-salts.json");
     const salts = fs.existsSync(saltPath) ? JSON.parse(fs.readFileSync(saltPath, "utf8")) : {};
-    for (const role of ROLES) {
-        salts[role] ??= crypto.randomBytes(16).toString("hex");
-        if (!/^[a-f0-9]{32}$/.test(salts[role])) throw new Error("Invalid staff salt configuration.");
+    for (const account of accounts) {
+        salts[account.id] ??= crypto.randomBytes(16).toString("hex");
+        if (!/^[a-f0-9]{32}$/.test(salts[account.id])) throw new Error("Invalid staff salt configuration.");
     }
     let keys;
-    if (passwords) {
-        keys = { version: 1, roles: {} };
-        for (const role of ROLES) keys.roles[role] = {
-            salt: salts[role], hash: await cryptoEngine.hashPassword(passwords[role], salts[role]),
-        };
-    } else {
+    const existingCompanies = existingAccounts.filter(account => !ROLES.includes(account.id));
+    if (!passwords || existingCompanies.length) {
+        if (!keyPath) throw new Error("Existing company keys are needed to preserve company access.");
         if (process.platform !== "win32" && (fs.statSync(keyPath).mode & 0o077)) throw new Error("Key file must be readable only by its owner.");
         keys = JSON.parse(fs.readFileSync(keyPath, "utf8"));
         if (keys.version !== 1) throw new Error("Unsupported key file.");
-        for (const role of ROLES) {
-            const key = keys.roles?.[role];
-            if (!key || key.salt !== salts[role] || !/^[a-f0-9]{64}$/.test(key.hash)) throw new Error("Saved keys do not match the site configuration.");
-            const existing = fs.readFileSync(path.join(output, role + ".html"), "utf8");
+        const verifyAccounts = passwords ? existingCompanies : existingAccounts;
+        for (const account of verifyAccounts) {
+            const key = ROLES.includes(account.id) ? keys.roles?.[account.id] : keys.accounts?.[account.id];
+            if (!key || key.salt !== salts[account.id] || !/^[a-f0-9]{64}$/.test(key.hash)) throw new Error("Saved keys do not match the site configuration.");
+            const existing = fs.readFileSync(path.join(output, account.id + ".html"), "utf8");
             const config = JSON.parse(existing.match(/<script id="staff-config" type="application\/json">(.*?)<\/script>/s)[1]);
             const checked = await codec.decode(config.encrypted.staticryptEncryptedMsgUniqueVariableName, key.hash, key.salt);
-            if (!checked.success || JSON.parse(checked.decoded).role !== role) throw new Error("Saved keys no longer unlock this site. Set passwords again to refresh them.");
+            if (!checked.success) throw new Error("Saved keys no longer unlock this site. Refresh the affected private keys before rebuilding.");
+            const data = JSON.parse(checked.decoded);
+            if (data.role !== account.role || (data.account || data.role) !== account.id) throw new Error("Saved keys do not match the account.");
         }
     }
+    if (passwords) {
+        keys ??= { version: 1, roles: {} };
+        for (const role of ROLES) keys.roles[role] = {
+            salt: salts[role], hash: await cryptoEngine.hashPassword(passwords[role], salts[role]),
+        };
+    }
+    if (companyAccounts.length) keys.accounts ??= {};
+    for (const account of companyAccounts) {
+        keys.accounts[account.id] = {
+            salt: salts[account.id], hash: await cryptoEngine.hashPassword(account.password, salts[account.id]),
+        };
+    }
     const files = assets();
-    for (const role of ROLES) {
-        const selected = tools.filter((tool) => role === "admin" || tool.access === "technician");
-        const plain = JSON.stringify({ version: 1, role, tools: selected });
-        const encrypted = await codec.encodeWithHashedPassword(plain, keys.roles[role].hash);
-        files[role + ".html"] = page(role, {
+    for (const account of accounts) {
+        const selected = tools.filter((tool) => account.role === "admin" || tool.access === "technician");
+        const plain = JSON.stringify({ version: 1, role: account.role, account: account.id, tools: selected });
+        const key = ROLES.includes(account.id) ? keys.roles[account.id] : keys.accounts[account.id];
+        const encrypted = await codec.encodeWithHashedPassword(plain, key.hash);
+        files[account.id + ".html"] = page(account.role, {
             staticryptEncryptedMsgUniqueVariableName: encrypted,
-            staticryptSaltUniqueVariableName: salts[role],
+            staticryptSaltUniqueVariableName: salts[account.id],
             isRememberEnabled: false,
             rememberDurationInDays: 0,
-        });
+        }, account, accounts);
     }
+    files["staff-accounts.json"] = JSON.stringify({ version: 1, accounts }, null, 2) + "\n";
     files["staff-salts.json"] = JSON.stringify(salts, null, 2) + "\n";
     files["users.html"] = files["technician.html"];
     saveFiles(output, files);
-    if (passwords && keyPath) saveKeys(keyPath, keys);
+    if ((passwords || companyAccounts.length) && keyPath) saveKeys(keyPath, keys);
 }
 
 async function main() {
@@ -142,7 +205,7 @@ async function main() {
     }
     const input = JSON.parse(fs.readFileSync(0, "utf8"));
     await build(input);
-    console.log("Encrypted Technician and Admin pages built. No passwords were saved.");
+    console.log("Encrypted user pages built. No passwords are included in the site output.");
     if (input.passwords && input.keyFile) console.log("Private encryption keys saved for future rebuilds.");
 }
 

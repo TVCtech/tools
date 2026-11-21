@@ -108,3 +108,86 @@ test("private saved keys rebuild without passwords and reject stale or public ke
         assert((await unlock(config(output, "admin"), "changed-key-test-password")).success);
     } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
+
+test("company accounts have separate passwords, inherit Technician tools and survive rebuilds", async () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "tvc-company-test-"));
+    try {
+        const source = path.join(temp, "source");
+        const output = path.join(temp, "site");
+        const keyFile = path.join(temp, "private", "build-keys.json");
+        fs.cpSync(path.join(root, "examples/staff"), source, { recursive: true });
+        await build({ source, output, passwords, keyFile });
+        const originalKeys = JSON.parse(fs.readFileSync(keyFile, "utf8"));
+        const companyAccounts = [
+            { id: "ss7", label: "SS7", password: "fixture-ss7-password" },
+            { id: "ptl", label: "PTL", password: "fixture-ptl-password" },
+            { id: "training", label: "Training", password: "fixture-training-password" },
+        ];
+        await build({ source, output, keyFile, companyAccounts });
+        assert.deepEqual(JSON.parse(fs.readFileSync(keyFile, "utf8")).roles, originalKeys.roles);
+        const registry = JSON.parse(fs.readFileSync(path.join(output, "staff-accounts.json"), "utf8"));
+        assert.deepEqual(registry.accounts.map(account => account.id), ["technician", "admin", "ss7", "ptl", "training"]);
+        for (const account of companyAccounts) {
+            const pageConfig = config(output, account.id);
+            assert.equal(pageConfig.account, account.id);
+            assert.equal(pageConfig.role, "technician");
+            const data = JSON.parse((await unlock(pageConfig, account.password)).decoded);
+            assert.equal(data.account, account.id);
+            assert.equal(data.role, "technician");
+            assert.deepEqual(data.tools.map(tool => tool.id), ["technician-demo"]);
+            assert.equal((await unlock(config(output, "admin"), account.password)).success, false);
+            for (const other of companyAccounts.filter(other => other.id !== account.id)) {
+                assert.equal((await unlock(config(output, other.id), account.password)).success, false);
+            }
+        }
+        const salts = fs.readFileSync(path.join(output, "staff-salts.json"), "utf8");
+        const privateKeys = fs.readFileSync(keyFile, "utf8");
+        fs.appendFileSync(path.join(source, "technician-demo.html"), "<!-- updated technician fixture -->", "utf8");
+        await build({ source, output, keyFile });
+        assert.equal(fs.readFileSync(keyFile, "utf8"), privateKeys);
+        assert.equal(fs.readFileSync(path.join(output, "staff-salts.json"), "utf8"), salts);
+        for (const account of companyAccounts) {
+            const data = JSON.parse((await unlock(config(output, account.id), account.password)).decoded);
+            assert(data.tools[0].html.includes("updated technician fixture"));
+        }
+        assert((await unlock(config(output, "admin"), passwords.admin)).success);
+        assert((await unlock(config(output, "technician"), passwords.technician)).success);
+        const snapshot = fs.readFileSync(path.join(output, "ss7.html"), "utf8");
+        await assert.rejects(build({ source, output, keyFile, companyAccounts }), /already exists/);
+        assert.equal(fs.readFileSync(path.join(output, "ss7.html"), "utf8"), snapshot);
+        await assert.rejects(build({ source, output, passwords }), /company keys/);
+        await build({ source, output, keyFile, passwords: { ...passwords, admin: "updated-admin-fixture-password" } });
+        assert((await unlock(config(output, "admin"), "updated-admin-fixture-password")).success);
+        assert((await unlock(config(output, "ss7"), companyAccounts[0].password)).success);
+
+        const keyValues = Object.values(JSON.parse(fs.readFileSync(keyFile, "utf8")).accounts).map(key => key.hash);
+        for (const account of registry.accounts) {
+            const raw = fs.readFileSync(path.join(output, account.id + ".html"), "utf8");
+            for (const secret of [...companyAccounts.map(account => account.password), ...keyValues]) assert(!raw.includes(secret));
+            assert(!raw.includes("updated technician fixture"));
+            assert(!raw.includes("The admin tool is working"));
+        }
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("invalid new accounts cannot overwrite existing site files or grant Admin access", async () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "tvc-company-invalid-"));
+    try {
+        const source = path.join(temp, "source");
+        const output = path.join(temp, "site");
+        const keyFile = path.join(temp, "private", "build-keys.json");
+        fs.cpSync(path.join(root, "examples/staff"), source, { recursive: true });
+        await build({ source, output, passwords, keyFile });
+        fs.writeFileSync(path.join(output, "calculator.html"), "Public calculator fixture", "utf8");
+        const before = fs.readFileSync(path.join(output, "admin.html"), "utf8");
+        for (const id of ["../outside", "users", "admin", "calculator", undefined]) {
+            await assert.rejects(build({ source, output, keyFile, companyAccounts: [{ id, label: "Company", password: "fixture-company-password" }] }));
+        }
+        assert.equal(fs.readFileSync(path.join(output, "calculator.html"), "utf8"), "Public calculator fixture");
+        assert.equal(fs.readFileSync(path.join(output, "admin.html"), "utf8"), before);
+        await build({ source, output, keyFile, companyAccounts: [{ id: "customer", label: "Customer", role: "admin", password: "fixture-customer-password" }] });
+        const data = JSON.parse((await unlock(config(output, "customer"), "fixture-customer-password")).decoded);
+        assert.equal(data.role, "technician");
+        assert(!data.tools.some(tool => tool.access === "admin"));
+    } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});

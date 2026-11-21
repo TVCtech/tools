@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>SS7 · TVC Tools</title>
+  <link rel="stylesheet" href="assets/staff.css?v=3">
+  <script src="assets/staticrypt.js" defer></script>
+  <script src="assets/staff.js?v=3" defer></script>
+</head>
+<body>
+  <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
+  <p id="notice" role="status"></p>
+  <main id="login-panel">
+    <h1>Users</h1>
+    <form id="login-form" class="card">
+      <label for="role">Account</label>
+      <select id="role"><option value="technician">Technician</option><option value="admin">Admin</option><option value="ss7">SS7</option><option value="ptl">PTL</option><option value="training">Training</option></select>
+      <label for="password">Password</label>
+      <div class="password-entry">
+        <input id="password" type="password" autocomplete="current-password" required>
+        <button id="show-password" type="button" aria-label="Show password" aria-controls="password" aria-pressed="false">Show</button>
+      </div>
+      <label class="remember"><input id="remember" type="checkbox">Remember this browser</label>
+      <button id="login-button" type="submit" class="primary" disabled>Login</button>
+      <p class="message" id="login-message" role="status" aria-live="polite">Preparing login…</p>
+    </form>
+    <noscript>Enable JavaScript to unlock these tools.</noscript>
+  </main>
+  <main id="tools-panel" hidden>
+    <h1>SS7 tools</h1>
+    <p class="muted" id="access-label"></p>
+    <div id="tool-list"></div>
+  </main>
+  <section id="viewer" hidden aria-label="Selected tool">
+    <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
+    <iframe id="tool-frame" title="User tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
+  </section>
+  <script id="staff-config" type="application/json">{"role":"technician","account":"ss7","accountLabel":"SS7","accounts":[{"id":"technician","label":"Technician","role":"technician"},{"id":"admin","label":"Admin","role":"admin"},{"id":"ss7","label":"SS7","role":"technician"},{"id":"ptl","label":"PTL","role":"technician"},{"id":"training","label":"Training","role":"technician"}],"encrypted":{"staticryptEncryptedMsgUniqueVariableName":"6308de04c1a5c3711868aeea12054546a56ef1a18ffa020d61f589ba750be411fbac3bef8d62aa05d3c688808aae9c939fd97ff1c2fc934cd3a3c25e54af598946721322d1eb692de20ac6d736755a770fd577dab9d48959c11a3eb0ab2aab212a6c747df8249afb7f035a1ce4a6e11d693309fd2e8195f3a745bf559888b9e2a8164548078c2544f6b5a8c8e53b8d4d7b19ecbc3d5346ec25359cf0bae98b757bc9e8feb6468b24ec1b7cee41a3d03b59ee3638de71da14a296c7ffc125503700b4d312eaffbaeddfcbf1e9291e30ad7390aca0f6035e0fc4af09688b8c8138b72092456d2f6b7b769af82c40cb1d7792882a61493b02f4b890457ca0f53941627a98191b2b0817979dc6dd51ad5e1cbb00b63829aeff2578aeba30cd7aa439798591846d0eae77becf6eab4ca3a4fb537eaea665600f6fbaeab89929aefecc081af702a7676c35e5b567462c174891e3badfdd38bafaa70e3da63d4ac52594022aa2aaae44221cea285a7d3e10427b84ad01d3bdc72b1e4599d7eedd1d06c6db86da6028e9f0f55f8a12cf97bfb08ea335696d297cecc8d497e87ef71c8d69a6b86f2f5aa4e656d2fc0b077b03a2ee812149adfaf492877083885778d965d07bc96cd286d5c34d9173714527a2269042155569d8de2150054ff1d86798e0e2cb8d4b612a46ec5369cea2c34d6de2997cd9b480af6c58f85d16c208208c555f23a8c6771a71bf935e3601bce35b20e6fde42c7b2f1a3a430d9703d0916a55877c69b1a429fa4f9e92f88db1f2d2dba6d1bcf7bf89f5b7d8e5bc53838bf2950760ba13866ed31ece5928e07fb5c5f7a3ad554b11265f6abe6f8c5055267f3cdfea0479dd380a195df77b50efb7162d716d05267618c4efa52d7302ddf157f1b020b5a319266689a4b8900c30285c5b97cb04b0c0196ebb3115d28f39693b02824d956257a99f21820fb2c7a76cc7e5ad532a42ca1d3132f19229963c646318ecbc53a246f602372924a734f9d536ae2f43a1f04a6c2d0922fb4e6f3fc6868d07","staticryptSaltUniqueVariableName":"c14a23e3c5de154e0b5fdecdb91faecd","isRememberEnabled":false,"rememberDurationInDays":0}}</script>
+</body>
+</html>

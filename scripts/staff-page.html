@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>@@TITLE@@ · TVC Tools</title>
-  <link rel="stylesheet" href="assets/staff.css?v=2">
+  <link rel="stylesheet" href="assets/staff.css?v=3">
   <script src="assets/staticrypt.js" defer></script>
-  <script src="assets/staff.js?v=2" defer></script>
+  <script src="assets/staff.js?v=3" defer></script>
 </head>
 <body>
   <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
@@ -15,8 +15,8 @@
   <main id="login-panel">
     <h1>Users</h1>
     <form id="login-form" class="card">
-      <label for="role">User</label>
-      <select id="role"><option value="technician">Technician</option><option value="admin">Admin</option></select>
+      <label for="role">Account</label>
+      <select id="role">@@ACCOUNTS@@</select>
       <label for="password">Password</label>
       <div class="password-entry">
         <input id="password" type="password" autocomplete="current-password" required>
