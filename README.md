@@ -207,6 +207,8 @@ replace an existing account or an unrelated page. Generated passwords are
 written to a new owner-only handover file under `~/.local/state/tvc-tools/`,
 outside both repositories; they are not printed or placed in command arguments.
 Give that file to the owner through a private channel. Do not commit it.
+For word-based company passphrases, use neutral everyday words (for example,
+objects, plants or colours). Do not use insults or negative descriptions.
 
 This command builds locally; publication remains a separate Git operation.
 An ordinary `scripts/rebuild_staff.py` rebuild includes every existing company
