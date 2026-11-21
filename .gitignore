@@ -8,3 +8,4 @@ test-results/
 .runtime/
 *.tmp
 build-keys.json
+company-logins-*.txt

@@ -1,11 +1,15 @@
-/* Role passwords unlock encrypted bundles; role selection alone grants nothing. */
+/* Each account password unlocks its own encrypted bundle. */
 (() => {
     "use strict";
     const prefix = "tvc-tools.staff.v1.";
     const epochKey = prefix + "logout";
-    const roles = ["technician", "admin"];
     const $ = (id) => document.getElementById(id);
     const config = $("staff-config") ? JSON.parse($("staff-config").textContent) : null;
+    const accounts = config?.accounts || [
+        {id: "technician", label: "Technician", role: "technician"},
+        {id: "admin", label: "Admin", role: "admin"},
+    ];
+    const accountId = config?.account || config?.role;
     let operation = 0;
     let unlocked = false;
     let bundle = null;
@@ -22,8 +26,11 @@
         try { window[storage].removeItem(key); } catch { /* Storage can be disabled. */ }
     }
     function key(role) { return prefix + role; }
-    function clearSession() {
-        roles.forEach((role) => remove("sessionStorage", key(role)));
+    function clearAccess(storage) {
+        try {
+            Object.keys(window[storage]).filter(name => name.startsWith(prefix) && name !== epochKey)
+                .forEach(name => remove(storage, name));
+        } catch { /* Storage can be disabled. The open page still locks. */ }
     }
     function lock() {
         operation++;
@@ -43,14 +50,14 @@
     }
     function remoteLogout() {
         observedEpoch = read("localStorage", epochKey) || "0";
-        clearSession();
+        clearAccess("sessionStorage");
         lock();
         if ($("notice")) $("notice").textContent = "Logged out. Choose a user and enter its password to log in again.";
         if ($("login-message")) $("login-message").textContent = "";
     }
     function logout() {
-        roles.forEach((role) => remove("localStorage", key(role)));
-        clearSession();
+        clearAccess("localStorage");
+        clearAccess("sessionStorage");
         write("localStorage", epochKey, String(Date.now()) + Math.random());
         channel?.postMessage("logout");
         remoteLogout();
@@ -63,7 +70,7 @@
     } catch { /* Storage events still handle other tabs where available. */ }
     window.addEventListener("storage", (event) => {
         if (event.key === null || event.key === epochKey ||
-            (roles.some((role) => event.key === key(role)) && event.newValue === null)) {
+            (event.key?.startsWith(prefix) && event.newValue === null)) {
             remoteLogout();
         }
     });
@@ -71,7 +78,7 @@
         if (!document.hidden && (read("localStorage", epochKey) || "0") !== observedEpoch) remoteLogout();
     });
     if (new URLSearchParams(location.search).has("logged-out") && $("notice")) {
-        $("notice").textContent = "Logged out of Technician and Admin on this browser.";
+        $("notice").textContent = "Logged out of all accounts on this browser.";
     }
     if (!config) return;
 
@@ -84,10 +91,11 @@
     $("show-password").addEventListener("click", () => {
         setPasswordVisible($("password").type === "password");
     });
-    $("role").value = config.role;
+    $("role").value = accountId;
     $("role").addEventListener("change", () => {
         lock();
-        location.assign($("role").value + ".html");
+        const selected = accounts.find(account => account.id === $("role").value);
+        if (selected) location.assign(selected.id + ".html");
     });
     function showMenu() {
         $("viewer").hidden = true;
@@ -100,7 +108,8 @@
         bundle = data;
         unlocked = true;
         $("login-panel").hidden = true;
-        $("access-label").textContent = config.role === "admin" ? "Admin access includes all technician tools." : "Technician access";
+        $("access-label").textContent = config.role === "admin" ? "Admin access includes all technician tools."
+            : accountId === "technician" ? "Technician access" : config.accountLabel + " · Technician access";
         $("tool-list").replaceChildren();
         bundle.tools.forEach((tool) => {
             const button = document.createElement("button");
@@ -139,17 +148,17 @@
             if (request !== operation || startedEpoch !== (read("localStorage", epochKey) || "0")) return false;
             if (!result.isSuccessful) {
                 if (fromHash) {
-                    remove("localStorage", key(config.role));
-                    remove("sessionStorage", key(config.role));
+                    remove("localStorage", key(accountId));
+                    remove("sessionStorage", key(accountId));
                 }
                 $("login-message").textContent = fromHash ? "Please enter your password again." : "Incorrect password for this user.";
                 return false;
             }
             const data = JSON.parse(decoded);
-            if (data.version !== 1 || data.role !== config.role || !Array.isArray(data.tools)) throw new Error("Invalid bundle");
+            if (data.version !== 1 || data.role !== config.role || (data.account || data.role) !== accountId || !Array.isArray(data.tools)) throw new Error("Invalid bundle");
             const credential = JSON.stringify({ hash: result.hashedPassword, epoch: startedEpoch });
-            write("sessionStorage", key(config.role), credential);
-            if (remember && !write("localStorage", key(config.role), credential)) {
+            write("sessionStorage", key(accountId), credential);
+            if (remember && !write("localStorage", key(accountId), credential)) {
                 $("notice").textContent = "This browser could not save your login. You can still use the tools now.";
             } else {
                 $("notice").textContent = "";
@@ -179,7 +188,7 @@
         $("login-button").disabled = false;
         $("login-message").textContent = "";
         for (const storage of ["localStorage", "sessionStorage"]) {
-            const saved = read(storage, key(config.role));
+            const saved = read(storage, key(accountId));
             if (!saved) continue;
             try {
                 const credential = JSON.parse(saved);
@@ -188,7 +197,7 @@
                     return;
                 }
             } catch { /* Ignore incomplete saved browser data. */ }
-            remove(storage, key(config.role));
+            remove(storage, key(accountId));
         }
     }
     $("login-form").addEventListener("submit", (event) => {

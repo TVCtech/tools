@@ -20,6 +20,11 @@ from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
 PASSWORDS = {"technician": "fixture-technician-password", "admin": "fixture-admin-password"}
+COMPANY_PASSWORDS = {
+    "ss7": "fixture-ss7-password",
+    "ptl": "fixture-ptl-password",
+    "training": "fixture-training-password",
+}
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -41,7 +46,14 @@ class StaffBrowserTests(unittest.TestCase):
         shutil.copytree(ROOT / "examples/staff", source)
         subprocess.run(
             [os.environ.get("TVC_NODE", "node"), str(ROOT / "scripts/build-staff.cjs")],
-            input=json.dumps({"source": str(source), "output": str(cls.site), "passwords": PASSWORDS}),
+            input=json.dumps({
+                "source": str(source), "output": str(cls.site), "passwords": PASSWORDS,
+                "keyFile": str(cls.base / "private-keys/build-keys.json"),
+                "companyAccounts": [
+                    {"id": account, "label": label, "password": COMPANY_PASSWORDS[account]}
+                    for account, label in [("ss7", "SS7"), ("ptl", "PTL"), ("training", "Training")]
+                ],
+            }),
             text=True, encoding="utf-8", check=True,
         )
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), partial(QuietHandler, directory=str(cls.site)))
@@ -162,6 +174,68 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#notice")).to_be_visible()
             page.locator("#logout").click()
             expect(page).to_have_url(self.url + "/users.html?logged-out=1")
+        finally:
+            context.close()
+
+    def test_company_selection_password_separation_and_logout(self):
+        context = self.context("company-profile")
+        try:
+            page = context.pages[0]
+            page.goto(self.url + "/users.html")
+            expect(page.locator("#role option")).to_have_text([
+                "Technician", "Admin", "SS7", "PTL", "Training",
+            ])
+            for account, label in [("ss7", "SS7"), ("ptl", "PTL"), ("training", "Training")]:
+                page.locator("#role").select_option(account)
+                expect(page).to_have_url(self.url + f"/{account}.html")
+                expect(page.locator("#role")).to_have_value(account)
+                expect(page.locator("#login-button")).to_be_enabled()
+                # Each company can unlock its own Technician bundle.
+                page.locator("#password").fill(COMPANY_PASSWORDS[account])
+                page.locator("#remember").set_checked(True)
+                page.locator("#login-button").click()
+                expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
+                expect(page.locator("#tool-list button")).to_have_count(1)
+                expect(page.locator("#access-label")).to_have_text(f"{label} · Technician access")
+                page.get_by_role("button", name="Technician test page").click()
+                page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()
+                expect(page.frame_locator("#tool-frame").locator("#result")).to_have_text("The technician tool is working.")
+                page.goto(self.url + "/users.html")
+            self.assertEqual(sorted(page.evaluate(
+                "Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout'))"
+            )), ["tvc-tools.staff.v1.ptl", "tvc-tools.staff.v1.ss7", "tvc-tools.staff.v1.training"])
+            other = context.new_page()
+            other.goto(self.url + "/ss7.html")
+            expect(other.locator("#tools-panel")).to_be_visible(timeout=30000)
+        finally:
+            context.close()
+        context = self.context("company-profile")
+        try:
+            page = context.pages[0]
+            # Remembered company access works after a browser restart.
+            page.goto(self.url + "/ss7.html")
+            expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
+            ptl = context.new_page()
+            ptl.goto(self.url + "/ptl.html")
+            expect(ptl.locator("#tools-panel")).to_be_visible(timeout=30000)
+            page.locator("#logout").click()
+            expect(ptl.locator("#login-panel")).to_be_visible()
+            expect(ptl.locator("#tools-panel")).to_be_hidden()
+            for account in ["ss7", "ptl", "training", "admin"]:
+                self.login(page, account, password=COMPANY_PASSWORDS["ss7"])
+                if account == "ss7":
+                    expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
+                    page.locator("#logout").click()
+                else:
+                    expect(page.locator("#login-message")).to_have_text(
+                        "Incorrect password for this user.", timeout=30000,
+                    )
+                    expect(page.locator("#tools-panel")).to_be_hidden()
+            self.assertEqual(page.evaluate(
+                "Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout'))"
+            ), [])
+            page.set_viewport_size({"width": 390, "height": 844})
+            self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
         finally:
             context.close()
 
