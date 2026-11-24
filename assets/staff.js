@@ -32,6 +32,7 @@
         if (!config) return;
         clearViewer(); $("tool-list").replaceChildren(); $("tool-title").textContent = "";
         $("tools-panel").hidden = true; $("viewer").hidden = true; $("login-panel").hidden = false;
+        $("your-tools-home").href = "users.html";
         $("role").value = genericLoginPage ? "" : accountId();
         $("password").value = ""; setPasswordVisible(false); $("login-button").disabled = false;
     }
@@ -67,6 +68,9 @@
         if (updateHistory && location.hash) history.pushState(null, "", location.pathname + location.search);
     }
     $("back-to-tools").addEventListener("click", () => showMenu(true));
+    $("your-tools-home").addEventListener("click", event => {
+        if (unlocked && !event.ctrlKey && !event.metaKey && !event.shiftKey) { event.preventDefault(); showMenu(true); }
+    });
     async function openTraining(path = "index.html", updateHistory = true) {
         if (!unlocked || !bundle?.training) return;
         const request = operation;
@@ -97,6 +101,7 @@
         bundle = data; unlocked = true;
         trainingViewer?.destroy(); trainingViewer = null;
         $("login-panel").hidden = true;
+        $("your-tools-home").href = accountId() + ".html";
         $("tools-panel").querySelector("h1").textContent = (config.accountLabel || config.role) + " tools";
         $("access-label").textContent = config.role === "admin" ? "Admin access includes all technician tools."
             : accountId() === "technician" ? "Technician access" : config.accountLabel + " · Technician access";

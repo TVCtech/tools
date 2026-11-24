@@ -114,6 +114,9 @@ name supplied by the owner. Company logins receive technician
 tools; Admin also receives admin tools. Each account has its own encrypted
 page, password and browser login record. A customer directory is not displayed.
 Company logins are shared credentials, rather than individual employee accounts.
+The user-area header and every framed tool return to **Your tools**, showing
+only that account's assigned tools. There is no public-tools menu link in the
+user-area navigation.
 Every account menu includes a link to the public CALSIS wheel spacer calculator.
 It opens in the same tab with an account-name return parameter, so Back to Your
 Tools restores that account even with session-only access. Public calculator
