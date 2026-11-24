@@ -23,7 +23,7 @@ button:disabled { cursor: wait; opacity: .65; }
 :focus-visible { outline: 3px solid #93b5ff; outline-offset: 3px; }
 .message { min-height: 1.5em; color: #a32626; }
 #notice:not(:empty) { margin: 16px 24px; }
-.tool-button { display: block; width: 100%; text-align: left; background: white; margin: 12px 0; padding: 18px; }
+.tool-button { display: block; width: 100%; text-align: left; background: white; margin: 12px 0; padding: 18px; border: 1px solid #b4bdc8; border-radius: 5px; color: inherit; text-decoration: none; }
 .tool-button strong, .tool-button small { display: block; }
 .tool-button small { margin-top: 6px; color: #5a6470; }
 #viewer { padding: 16px; }

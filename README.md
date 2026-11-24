@@ -113,6 +113,7 @@ Enter the account name supplied by the owner. Company logins receive technician
 tools; Admin also receives admin tools. Each account has its own encrypted
 page, password and browser login record. A customer directory is not displayed.
 Company logins are shared credentials, rather than individual employee accounts.
+Every account menu includes a link to the public CALSIS wheel spacer calculator.
 Account page names and older repository revisions can still reveal identifiers;
 the login form does not promise to conceal their existence.
 
