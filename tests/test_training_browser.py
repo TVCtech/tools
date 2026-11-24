@@ -47,14 +47,14 @@ class TrainingBrowserTests(unittest.TestCase):
         cls.browser.close(); cls.pw.stop()
         cls.server.shutdown(); cls.server.server_close(); cls.thread.join(); cls.temp.cleanup()
 
-    def start(self, account='ss7', mobile=False):
+    def start(self, account='ss7', mobile=False, remember=True):
         context = self.browser.new_context(viewport={'width': 390 if mobile else 1280, 'height': 900}, accept_downloads=True)
         self.addCleanup(context.close)
         page = context.new_page()
         errors = []
         page.on('pageerror', lambda e: errors.append(str(e)))
         page.goto(self.url + '/' + account + '.html')
-        page.locator('#remember').check()
+        page.locator('#remember').set_checked(remember)
         page.locator('#password').fill('fixture-' + account + '-password')
         requests = []
         page.on('request', lambda request: requests.append(request.url))
@@ -164,16 +164,50 @@ class TrainingBrowserTests(unittest.TestCase):
         self.assertFalse(any(method == 'POST' or 'script.google.com' in url for method, url in requests))
         self.assertEqual(errors, [])
 
-    def test_company_login_cannot_fetch_admin_question_page(self):
-        page, frame, errors = self.start()
+    def test_company_can_paste_both_unlisted_links_without_remember(self):
+        for account in ['ss7', 'training']:
+            with self.subTest(account=account):
+                page, frame, errors = self.start(account=account, mobile=True, remember=False)
+                requests = []
+                page.on('request', lambda request: requests.append((request.method, request.url)))
+                stored = page.evaluate('() => JSON.stringify(localStorage)')
+                for bank, filename in [('technician', 'question-bank.html'), ('inspector', 'question-bank-inspector.html')]:
+                    page.goto(self.url + '/users.html#training=calsis-160&page=quiz%2F' + filename)
+                    frame = page.frame_locator('#tool-frame')
+                    count = len(json.loads((Path(os.environ['TVC_TRAINING_SOURCE']) / f'quiz/questions-{bank}.json').read_text())['questions'])
+                    expect(frame.locator('h1')).to_have_text(bank.title() + ' Question Bank', timeout=30000)
+                    expect(frame.locator('.bank-question')).to_have_count(count, timeout=15000)
+                    expect(frame.locator('.correct-badge:visible')).to_have_count(count)
+                    expect(page.locator('#your-tools-home')).to_have_attribute('href', account + '.html')
+                    frame.locator('#bank-search').fill('zzzznoresultszzzz')
+                    expect(frame.locator('.bank-question:visible')).to_have_count(0)
+                    frame.locator('#bank-search').fill('')
+                    self.assertTrue(frame.locator('body').evaluate('() => document.documentElement.scrollWidth <= innerWidth'))
+                    self.assertEqual(page.evaluate('() => JSON.stringify(localStorage)'), stored)
+                    page.locator('#your-tools-home').click()
+                    expect(page.locator('[data-training]')).to_have_count(1)
+                    page.locator('[data-training]').click()
+                    expect(frame.locator('.choice')).to_have_count(3, timeout=15000)
+                    expect(frame.locator('[data-training-link*=\"question-bank\"]')).to_have_count(0)
+                self.assertFalse(any(method == 'POST' or 'script.google.com' in url for method, url in requests))
+                self.assertEqual(errors, [])
+
+    def test_question_link_requires_login_and_preserves_destination(self):
+        context = self.browser.new_context()
+        self.addCleanup(context.close)
+        page = context.new_page()
         requests = []
         page.on('request', lambda request: requests.append(request.url))
-        # Shared manifest is cached; rejecting the admin resource must not fetch it.
-        frame.locator('body').evaluate('() => TrainingHost.openPage("quiz/question-bank.html")')
-        expect(frame.locator('#training-load-error')).to_be_visible(timeout=15000)
-        expect(frame.locator('.bank-question')).to_have_count(0)
+        page.goto(self.url + '/users.html#training=calsis-160&page=quiz%2Fquestion-bank-inspector.html')
+        expect(page.locator('#login-panel')).to_be_visible()
         self.assertFalse(any(url.endswith('.bin') for url in requests))
-        self.assertEqual(errors, [])
+        page.locator('#role').fill('ss7')
+        page.locator('#password').fill('fixture-ss7-password')
+        page.locator('#login-button').click()
+        frame = page.frame_locator('#tool-frame')
+        expect(frame.locator('h1')).to_have_text('Inspector Question Bank', timeout=30000)
+        expect(frame.locator('.bank-question')).to_have_count(100)
+        expect(page.locator('#your-tools-home')).to_have_attribute('href', 'ss7.html')
 
     def test_fail_retry_pass_distinction_download_and_new_tab(self):
         page, frame, errors = self.start()
