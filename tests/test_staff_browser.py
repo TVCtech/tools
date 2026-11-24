@@ -39,7 +39,7 @@ class StaffBrowserTests(unittest.TestCase):
         cls.base = Path(cls.temp.name)
         cls.site = cls.base / "site"
         cls.site.mkdir()
-        for name in ("index.html", "staff.html"):
+        for name in ("index.html", "staff.html", "Calsis160WheelSpacerCalc.html"):
             shutil.copy2(ROOT / name, cls.site / name)
         shutil.copytree(ROOT / "assets", cls.site / "assets")
         source = cls.base / "private"
@@ -109,7 +109,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#tools-panel")).to_be_hidden()
             self.login(page, "technician", remember=True)
             expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
-            expect(page.locator('#tool-list a[href="Calsis160WheelSpacerCalc.html"]')).to_have_attribute('target', '_blank')
+            expect(page.locator('#tool-list a[href="Calsis160WheelSpacerCalc.html?user=technician"]')).to_be_visible()
             expect(page.locator("#tool-list button")).to_have_count(1)
             page.get_by_role("button", name="Technician test page").click()
             page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()
@@ -234,6 +234,27 @@ class StaffBrowserTests(unittest.TestCase):
             ), [])
             page.set_viewport_size({"width": 390, "height": 844})
             self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+        finally:
+            context.close()
+
+    def test_wheel_returns_to_current_account_without_remember(self):
+        context = self.context("wheel-return-profile")
+        try:
+            page = context.pages[0]
+            for account in ("ss7", "admin"):
+                password = COMPANY_PASSWORDS.get(account) or PASSWORDS[account]
+                self.login(page, account, remember=False, password=password)
+                expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
+                link = page.locator('#tool-list a[href^="Calsis160WheelSpacerCalc.html"]')
+                link.click()
+                expect(page).to_have_url(self.url + "/Calsis160WheelSpacerCalc.html?user=" + account)
+                page.get_by_role("link", name="Back to Your Tools").click()
+                expect(page).to_have_url(self.url + "/" + account + ".html")
+                expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
+                expect(page.locator("#login-panel")).to_be_hidden()
+            for query in ("", "?user=https://example.com", "?user=../admin"):
+                page.goto(self.url + "/Calsis160WheelSpacerCalc.html" + query)
+                expect(page.locator(".back-button")).to_have_attribute("href", "https://tvctech.github.io/tools/index.html")
         finally:
             context.close()
 

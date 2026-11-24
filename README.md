@@ -114,6 +114,9 @@ tools; Admin also receives admin tools. Each account has its own encrypted
 page, password and browser login record. A customer directory is not displayed.
 Company logins are shared credentials, rather than individual employee accounts.
 Every account menu includes a link to the public CALSIS wheel spacer calculator.
+It opens in the same tab with an account-name return parameter, so Back to Your
+Tools restores that account even with session-only access. Public calculator
+visits retain their normal public-tools return link. No credentials enter the URL.
 Account page names and older repository revisions can still reveal identifiers;
 the login form does not promise to conceal their existence.
 
@@ -287,7 +290,10 @@ The results receiver and its installer live in the private repository. Recording
 requires a deployed Apps Script `/exec` endpoint and explicit enablement. The
 host requires a matching readable receipt before reporting success; failed
 saves can be retried without duplicating events. Central recording is not
-claimed while configuration is missing. Keep training sheets Restricted.
+claimed while configuration is missing. Company reports can contain selected
+completed-attempt fields while the master keeps the full technical event log.
+Receiver changes require updating the existing Google deployment; a website
+build alone does not deploy Apps Script. Keep training sheets Restricted.
 
 For unencrypted local preview, serve the private training directory with a
 local HTTP server. Never copy that preview into this public repository. The

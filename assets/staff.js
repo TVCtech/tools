@@ -110,8 +110,7 @@
         if (data.training) button(data.training.label, "Manuals and training test", () => openTraining(), true);
         const wheelLink = document.createElement("a");
         wheelLink.className = "tool-button";
-        wheelLink.href = "Calsis160WheelSpacerCalc.html";
-        wheelLink.target = "_blank"; wheelLink.rel = "noopener";
+        wheelLink.href = "Calsis160WheelSpacerCalc.html?user=" + encodeURIComponent(accountId());
         const wheelTitle = document.createElement("strong"), wheelDetail = document.createElement("small");
         wheelTitle.textContent = "CALSIS 160 Wheel Spacer Calculator";
         wheelDetail.textContent = "Open the wheel spacer calculator";
