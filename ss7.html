@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="assets/staff.css?v=5">
   <script src="assets/staticrypt.js" defer></script>
   <script src="assets/training-viewer.js?v=1" defer></script>
-  <script src="assets/staff.js?v=7" defer></script>
+  <script src="assets/staff.js?v=8" defer></script>
 </head>
 <body>
-  <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
+  <header><a id="your-tools-home" href="users.html">Your tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
   <p id="notice" role="status"></p>
   <main id="login-panel">
     <h1>Users</h1>
@@ -36,7 +36,7 @@
     <div id="tool-list"></div>
   </main>
   <section id="viewer" hidden aria-label="Selected tool">
-    <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
+    <div id="viewer-bar"><button id="back-to-tools" type="button">← Back to Your Tools</button><strong id="tool-title"></strong></div>
     <iframe id="tool-frame" title="User tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
   </section>
   <script id="staff-config" type="application/json">{"role":"technician","account":"ss7","accountLabel":"SS7","encrypted":{"staticryptEncryptedMsgUniqueVariableName":"656b93350b9289a400cab7c9cc523e3323c4c7b3256fa8f729c04ed563bd7ee00824271af2d25d8a40f3250dd2ea5b571a562749644ad102f95b22b959989f58bdf16094185d0af8e48f081df491d3f0293b91fe14b1223ac29ea09525d0a7d92ef76f4aed604a1568a703da966f41410b3face0db2de9215d5feeb30c0e9af9589bfb70a0ad5b9e21a645b3db2868efe0c86400a4080ab4f247045ce92a3b0e5c40f88e8bac8c2a04bdf8e9606adbc37f3a5d5e0438d1f2429baa109e44fb0f97c76bbeed57ab44999e18e3612654d73c738a62f450bc1f58d011ed9c98b7f506c6160b4eb43c1f8d5762e76f19a661590f07de31111211ba0e9507f2270e87b13c118bc3eb3a1f156f8cd2ab27920a1a7d90930402fb3b7983aeb9fcf46d0495c3dc927bb62180bf0ddb88cd0512f661ba40030fd1055ec77e1d4e647631d219c64864feeb7026b5712149913aa898ef0c413140ae191215ff6336b26f72115940fe5f263c02f6eefe6fbb0ca062cc3415a17206b65080270ac4c2af0647ddb644fcc1cbb15f75caeea918b4bc746e90077badcc3d42006c53d9fa64b78e9bec2cf0182246a80201489cf425e6e868fc70126e7b4bcded6647b5fc65a5c52b70f5bb4b03275a34ab2feac00bae82a852116b1f102ca49c9c48af6923e63b27f9e7655f31e6c5fa449de0871a2ff2f17262d345f409741eb573996c425acd8ee81b0c874787445a8c381862b5c7a7d736f7e878cef536cb400315cd4782ee0dd11bf5e18c2d0f766480040e5e4be45797436dde12ed2b2563b37f008015ad5c6501c07d74938ce6adcc36d455872a30","staticryptSaltUniqueVariableName":"ebe17bbacc793a3ccf8bb325aee310a1","isRememberEnabled":false,"rememberDurationInDays":0}}</script>

@@ -115,6 +115,12 @@ class StaffBrowserTests(unittest.TestCase):
             page.get_by_role("button", name="Technician test page").click()
             page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()
             expect(page.frame_locator("#tool-frame").locator("#result")).to_have_text("The technician tool is working.")
+            expect(page.locator('header a[href="index.html"]')).to_have_count(0)
+            expect(page.locator("#back-to-tools")).to_have_text("← Back to Your Tools")
+            page.get_by_role("link", name="Your tools", exact=True).click()
+            expect(page.locator("#tools-panel")).to_be_visible()
+            expect(page.locator("#viewer")).to_be_hidden()
+            expect(page.locator("#your-tools-home")).to_have_attribute("href", "technician.html")
             page.reload()
             expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
         finally:

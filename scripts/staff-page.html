@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="assets/staff.css?v=5">
   <script src="assets/staticrypt.js" defer></script>
   <script src="assets/training-viewer.js?v=1" defer></script>
-  <script src="assets/staff.js?v=7" defer></script>
+  <script src="assets/staff.js?v=8" defer></script>
 </head>
 <body>
-  <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
+  <header><a id="your-tools-home" href="users.html">Your tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
   <p id="notice" role="status"></p>
   <main id="login-panel">
     <h1>Users</h1>
@@ -36,7 +36,7 @@
     <div id="tool-list"></div>
   </main>
   <section id="viewer" hidden aria-label="Selected tool">
-    <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
+    <div id="viewer-bar"><button id="back-to-tools" type="button">← Back to Your Tools</button><strong id="tool-title"></strong></div>
     <iframe id="tool-frame" title="User tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
   </section>
   <script id="staff-config" type="application/json">@@CONFIG@@</script>
