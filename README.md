@@ -278,7 +278,9 @@ marks resources that require a separate Admin key. Only the Admin account bundle
 receives that key; the viewer checks access before fetching. The access list must
 include each private page's own scripts/styles. Normal course resources retain
 their existing key and cached ciphertext. An unlisted page is kept out of course
-navigation and search indexes; its direct URL still requires the Admin login.
+navigation and search indexes. Access follows the resource's encryption scope;
+unlisted company review pages use the normal course key and require a training
+account, while resources marked `adminOnly` require the Admin login.
 
 ```sh
 python3 scripts/rebuild_staff.py --training-source /private/repo/training/calsis-160 --training-configuration /private/training-host-config.json
