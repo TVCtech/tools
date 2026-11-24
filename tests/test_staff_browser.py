@@ -51,7 +51,7 @@ class StaffBrowserTests(unittest.TestCase):
                 "keyFile": str(cls.base / "private-keys/build-keys.json"),
                 "companyAccounts": [
                     {"id": account, "label": label, "password": COMPANY_PASSWORDS[account]}
-                    for account, label in [("ss7", "SS7"), ("ptl", "PTL"), ("training", "Training")]
+                    for account, label in [("ss7", "SubSea7"), ("ptl", "PTL"), ("training", "Training")]
                 ],
             }),
             text=True, encoding="utf-8", check=True,
@@ -116,7 +116,10 @@ class StaffBrowserTests(unittest.TestCase):
             page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()
             expect(page.frame_locator("#tool-frame").locator("#result")).to_have_text("The technician tool is working.")
             expect(page.locator('header a[href="index.html"]')).to_have_count(0)
-            expect(page.locator("#back-to-tools")).to_have_text("← Back to Your Tools")
+            expect(page.locator("#viewer-bar")).to_have_count(0)
+            frame_box = page.locator("#tool-frame").bounding_box()
+            self.assertGreater(frame_box["height"], page.viewport_size["height"] - 130)
+            self.assertLessEqual(frame_box["y"] + frame_box["height"], page.viewport_size["height"])
             page.get_by_role("link", name="Your tools", exact=True).click()
             expect(page.locator("#tools-panel")).to_be_visible()
             expect(page.locator("#viewer")).to_be_hidden()
@@ -135,7 +138,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(admin.locator("#tool-list button")).to_have_count(2, timeout=30000)
             admin.get_by_role("button", name="Technician test page").click()
             expect(admin.frame_locator("#tool-frame").get_by_role("heading", name="Technician test page")).to_be_visible()
-            admin.locator("#back-to-tools").click()
+            admin.locator("#your-tools-home").click()
             admin.get_by_role("button", name="Admin test page").click()
             expect(admin.frame_locator("#tool-frame").get_by_role("heading", name="Admin test page")).to_be_visible()
             # Leave an authenticated page in history, then log out from a second visit.
@@ -193,7 +196,7 @@ class StaffBrowserTests(unittest.TestCase):
             page.goto(self.url + "/users.html")
             expect(page.locator("#role")).to_have_attribute("type", "text")
             expect(page.locator("#role option")).to_have_count(0)
-            for account, label in [("ss7", "SS7"), ("ptl", "PTL"), ("training", "Training")]:
+            for account, label in [("ss7", "SubSea7"), ("ptl", "PTL"), ("training", "Training")]:
                 page.goto(self.url + f"/{account}.html")
                 expect(page.locator("#role")).to_have_value(account)
                 expect(page.locator("#login-button")).to_be_enabled()
@@ -203,7 +206,11 @@ class StaffBrowserTests(unittest.TestCase):
                 page.locator("#login-button").click()
                 expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
                 expect(page.locator("#tool-list button")).to_have_count(1)
-                expect(page.locator("#access-label")).to_have_text(f"{label} · Technician access")
+                if account == "ss7":
+                    expect(page.locator("#tools-panel h1")).to_have_text("SubSea7 Home Page")
+                    expect(page.locator("#access-label")).to_be_hidden()
+                else:
+                    expect(page.locator("#access-label")).to_have_text(f"{label} · Technician access")
                 page.get_by_role("button", name="Technician test page").click()
                 page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()
                 expect(page.frame_locator("#tool-frame").locator("#result")).to_have_text("The technician tool is working.")
