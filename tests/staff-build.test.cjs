@@ -125,12 +125,14 @@ test("company accounts have separate passwords, inherit Technician tools and sur
         ];
         await build({ source, output, keyFile, companyAccounts });
         assert.deepEqual(JSON.parse(fs.readFileSync(keyFile, "utf8")).roles, originalKeys.roles);
-        const registry = JSON.parse(fs.readFileSync(path.join(output, "staff-accounts.json"), "utf8"));
+        const registry = {accounts: JSON.parse(fs.readFileSync(keyFile, "utf8")).accountMetadata};
+        assert(!fs.existsSync(path.join(output, "staff-accounts.json")));
         assert.deepEqual(registry.accounts.map(account => account.id), ["technician", "admin", "ss7", "ptl", "training"]);
         for (const account of companyAccounts) {
             const pageConfig = config(output, account.id);
             assert.equal(pageConfig.account, account.id);
             assert.equal(pageConfig.role, "technician");
+            assert.equal(pageConfig.accounts, undefined);
             const data = JSON.parse((await unlock(pageConfig, account.password)).decoded);
             assert.equal(data.account, account.id);
             assert.equal(data.role, "technician");

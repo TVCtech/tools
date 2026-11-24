@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const cryptoEngine = require("staticrypt/lib/cryptoEngine.js");
 const codec = require("staticrypt/lib/codec.js").init(cryptoEngine);
 const { buildStaticryptJS } = require("staticrypt/cli/helpers.js");
+const { buildTraining } = require("./build-training.cjs");
 const ROOT = path.resolve(__dirname, "..");
 const ROLES = ["technician", "admin"];
 const DEFAULT_ACCOUNTS = [
@@ -40,10 +41,11 @@ function escapeHtml(value) {
         .replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
-function accountList(output) {
+function accountList(output, savedAccounts) {
     const filename = path.join(output, "staff-accounts.json");
-    if (!fs.existsSync(filename)) return DEFAULT_ACCOUNTS.map(account => ({ ...account }));
-    const record = JSON.parse(fs.readFileSync(filename, "utf8"));
+    if (!fs.existsSync(filename) && !savedAccounts && fs.existsSync(path.join(output, "staff-account-settings.json"))) throw new Error("Existing company keys are needed to preserve company access.");
+    if (!fs.existsSync(filename) && !savedAccounts) return DEFAULT_ACCOUNTS.map(account => ({ ...account }));
+    const record = fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename, "utf8")) : {version: 1, accounts: savedAccounts};
     if (record.version !== 1 || !Array.isArray(record.accounts)) throw new Error("Unsupported account list.");
     const ids = new Set();
     for (const account of record.accounts) {
@@ -68,8 +70,8 @@ function validAccount(account) {
 function page(role, encrypted, account = DEFAULT_ACCOUNTS.find(entry => entry.id === role), accounts = DEFAULT_ACCOUNTS) {
     return fs.readFileSync(path.join(__dirname, "staff-page.html"), "utf8")
         .replaceAll("@@TITLE@@", escapeHtml(account.label))
-        .replace("@@ACCOUNTS@@", accounts.map(entry => `<option value="${entry.id}">${escapeHtml(entry.label)}</option>`).join(""))
-        .replace("@@CONFIG@@", JSON.stringify({ role, account: account.id, accountLabel: account.label, accounts, encrypted }).replaceAll("<", "\\u003c"));
+        .replace("@@ACCOUNT@@", account.id)
+        .replace("@@CONFIG@@", JSON.stringify({ role, account: account.id, accountLabel: account.label, encrypted }).replaceAll("<", "\\u003c"));
 }
 
 function assets() {
@@ -119,14 +121,20 @@ function saveKeys(filename, record) {
     }
 }
 
-async function build({ source, passwords, keyFile, output = ROOT, companyAccounts = [] }) {
+async function build({ source, passwords, keyFile, output = ROOT, companyAccounts = [], trainingSource, trainingConfiguration }) {
     if (passwords) {
         if (ROLES.some((role) => typeof passwords[role] !== "string" || !passwords[role])) throw new Error("Both passwords are required.");
         if (passwords.admin === passwords.technician) throw new Error("Use different passwords for Admin and Technician.");
     } else if (!keyFile) throw new Error("Passwords or a private key file are required.");
     const keyPath = keyFile ? privateKeyPath(keyFile, output) : null;
+    let savedKeys = null;
+    if (keyPath && fs.existsSync(keyPath)) {
+        if (process.platform !== "win32" && (fs.statSync(keyPath).mode & 0o077)) throw new Error("Key file must be readable only by its owner.");
+        savedKeys = JSON.parse(fs.readFileSync(keyPath, "utf8"));
+    }
+    const originalKeys = JSON.stringify(savedKeys);
     const tools = loadTools(source);
-    const existingAccounts = accountList(output);
+    const existingAccounts = accountList(output, savedKeys?.accountMetadata);
     const accounts = existingAccounts.map(account => ({ ...account }));
     const newPasswords = new Set();
     for (const account of companyAccounts) {
@@ -147,11 +155,12 @@ async function build({ source, passwords, keyFile, output = ROOT, companyAccount
         if (!/^[a-f0-9]{32}$/.test(salts[account.id])) throw new Error("Invalid staff salt configuration.");
     }
     let keys;
+    const existingData = new Map();
     const existingCompanies = existingAccounts.filter(account => !ROLES.includes(account.id));
     if (!passwords || existingCompanies.length) {
         if (!keyPath) throw new Error("Existing company keys are needed to preserve company access.");
         if (process.platform !== "win32" && (fs.statSync(keyPath).mode & 0o077)) throw new Error("Key file must be readable only by its owner.");
-        keys = JSON.parse(fs.readFileSync(keyPath, "utf8"));
+        keys = savedKeys;
         if (keys.version !== 1) throw new Error("Unsupported key file.");
         const verifyAccounts = passwords ? existingCompanies : existingAccounts;
         for (const account of verifyAccounts) {
@@ -163,6 +172,7 @@ async function build({ source, passwords, keyFile, output = ROOT, companyAccount
             if (!checked.success) throw new Error("Saved keys no longer unlock this site. Refresh the affected private keys before rebuilding.");
             const data = JSON.parse(checked.decoded);
             if (data.role !== account.role || (data.account || data.role) !== account.id) throw new Error("Saved keys do not match the account.");
+            existingData.set(account.id, data);
         }
     }
     if (passwords) {
@@ -177,10 +187,19 @@ async function build({ source, passwords, keyFile, output = ROOT, companyAccount
             salt: salts[account.id], hash: await cryptoEngine.hashPassword(account.password, salts[account.id]),
         };
     }
+    keys.accountMetadata = accounts;
     const files = assets();
+    if (accounts.some(account => !ROLES.includes(account.id))) files["staff-account-settings.json"] = JSON.stringify({version: 1, privateAccountIndex: true}) + "\n";
+    const training = trainingSource ? buildTraining({source: trainingSource, output, keys, configuration: trainingConfiguration}) : null;
+    if (training) {
+        Object.assign(files, training.files);
+        files["assets/training-host.js"] = fs.readFileSync(path.join(ROOT, "assets/training-host.js"), "utf8");
+        files["assets/training-viewer.js"] = fs.readFileSync(path.join(ROOT, "assets/training-viewer.js"), "utf8");
+    }
     for (const account of accounts) {
         const selected = tools.filter((tool) => account.role === "admin" || tool.access === "technician");
-        const plain = JSON.stringify({ version: 1, role: account.role, account: account.id, tools: selected });
+        const packageInfo = training ? training.forAccount(account) : existingData.get(account.id)?.training;
+        const plain = JSON.stringify({ version: 1, role: account.role, account: account.id, tools: selected, ...(packageInfo ? {training: packageInfo} : {}) });
         const key = ROLES.includes(account.id) ? keys.roles[account.id] : keys.accounts[account.id];
         const encrypted = await codec.encodeWithHashedPassword(plain, key.hash);
         files[account.id + ".html"] = page(account.role, {
@@ -190,11 +209,11 @@ async function build({ source, passwords, keyFile, output = ROOT, companyAccount
             rememberDurationInDays: 0,
         }, account, accounts);
     }
-    files["staff-accounts.json"] = JSON.stringify({ version: 1, accounts }, null, 2) + "\n";
     files["staff-salts.json"] = JSON.stringify(salts, null, 2) + "\n";
     files["users.html"] = files["technician.html"];
     saveFiles(output, files);
-    if ((passwords || companyAccounts.length) && keyPath) saveKeys(keyPath, keys);
+    if (keyPath && JSON.stringify(keys) !== originalKeys) saveKeys(keyPath, keys);
+    if (fs.existsSync(path.join(output, "staff-accounts.json"))) fs.unlinkSync(path.join(output, "staff-accounts.json"));
 }
 
 async function main() {
