@@ -133,6 +133,48 @@ class TrainingBrowserTests(unittest.TestCase):
         self.assertIsNone(page.locator('#tool-frame').get_attribute('srcdoc'))
         self.assertEqual(errors, [])
 
+    def test_admin_question_bank_is_unlisted_searchable_and_read_only(self):
+        page, frame, errors = self.start(account='admin', mobile=True)
+        requests = []
+        page.on('request', lambda request: requests.append((request.method, request.url)))
+        self.assertEqual(frame.locator('[data-training-link*=\"question-bank\"]').count(), 0)
+        # Exercise the exact URL Alex will receive, including login restoration.
+        page.goto(self.url + '/admin.html#training=calsis-160&page=quiz%2Fquestion-bank.html')
+        frame = page.frame_locator('#tool-frame')
+        count = len(json.loads((Path(os.environ['TVC_TRAINING_SOURCE']) / 'quiz/questions-technician.json').read_text())['questions'])
+        expect(frame.locator('.bank-question')).to_have_count(count, timeout=30000)
+        expect(frame.locator('.correct-badge:visible')).to_have_count(count)
+        frame.locator('#show-answers').uncheck()
+        expect(frame.locator('.correct-badge:visible')).to_have_count(0)
+        frame.locator('#show-answers').check()
+        first_id = frame.locator('.bank-question').first.get_attribute('id').removeprefix('question-')
+        frame.locator('#bank-search').fill(first_id)
+        expect(frame.locator('.bank-question:visible')).to_have_count(1)
+        frame.locator('#bank-search').fill('zzzznoresultszzzz')
+        expect(frame.locator('.bank-question:visible')).to_have_count(0)
+        frame.locator('#bank-search').fill('')
+        image = frame.locator('.bank-question img:not(.hint-picture)').first
+        image.scroll_into_view_if_needed()
+        expect(image).to_have_attribute('src', __import__('re').compile('^blob:'), timeout=15000)
+        image.click()
+        expect(frame.locator('.picture-zoom')).to_be_visible()
+        page.keyboard.press('Escape')
+        expect(frame.locator('.picture-zoom')).to_be_hidden()
+        self.assertTrue(frame.locator('body').evaluate('() => document.documentElement.scrollWidth <= innerWidth'))
+        self.assertFalse(any(method == 'POST' or 'script.google.com' in url for method, url in requests))
+        self.assertEqual(errors, [])
+
+    def test_company_login_cannot_fetch_admin_question_page(self):
+        page, frame, errors = self.start()
+        requests = []
+        page.on('request', lambda request: requests.append(request.url))
+        # Shared manifest is cached; rejecting the admin resource must not fetch it.
+        frame.locator('body').evaluate('() => TrainingHost.openPage("quiz/question-bank.html")')
+        expect(frame.locator('#training-load-error')).to_be_visible(timeout=15000)
+        expect(frame.locator('.bank-question')).to_have_count(0)
+        self.assertFalse(any(url.endswith('.bin') for url in requests))
+        self.assertEqual(errors, [])
+
     def test_fail_retry_pass_distinction_download_and_new_tab(self):
         page, frame, errors = self.start()
         self.quiz(page, frame)

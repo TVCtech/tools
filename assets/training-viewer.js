@@ -20,7 +20,7 @@
         close() {
             this.generation++; this.port?.close(); this.port = null;
             this.controllers.forEach(controller => controller.abort()); this.controllers.clear();
-            this.descriptor = null; this.manifest = null; this.key = null; this.cache.clear();
+            this.descriptor = null; this.manifest = null; this.key = null; this.adminKey = null; this.cache.clear();
             this.frame.removeAttribute("srcdoc"); this.frame.src = "about:blank";
             this.frame.setAttribute("sandbox", "allow-scripts allow-forms allow-downloads allow-modals");
         }
@@ -42,11 +42,17 @@
         async decrypt(url, resource) {
             const data = await this.fetchBytes(url);
             if (decoder.decode(data.slice(0, 4)) !== "TVC1" || data.length < 32) throw new Error("Invalid encrypted resource.");
-            return new Uint8Array(await crypto.subtle.decrypt({name: "AES-GCM", iv: data.slice(4, 16), additionalData: encoder.encode(this.descriptor.id + ":" + resource)}, this.key, data.slice(16)));
+            const key = this.manifest?.files[resource]?.access === "admin" ? this.adminKey : this.key;
+            return new Uint8Array(await crypto.subtle.decrypt({name: "AES-GCM", iv: data.slice(4, 16), additionalData: encoder.encode(this.descriptor.id + ":" + resource)}, key, data.slice(16)));
         }
-        async resource(path) {
+        resourceEntry(path) {
             const entry = this.manifest?.files[path];
             if (!entry || !MIME.has(entry.type)) throw new Error("Unknown training resource.");
+            if (entry.access && (entry.access !== "admin" || this.accountId !== "admin" || !this.adminKey)) throw new Error("This page requires the Admin login.");
+            return entry;
+        }
+        async resource(path) {
+            const entry = this.resourceEntry(path);
             if (!this.cache.has(path)) {
                 const promise = this.decrypt(entry.url, path).catch(error => { this.cache.delete(path); throw error; });
                 this.cache.set(path, promise);
@@ -63,6 +69,7 @@
                 this.packageId = descriptor.manifest;
                 const bytes = Uint8Array.from(descriptor.key.match(/../g), pair => parseInt(pair, 16));
                 this.key = await crypto.subtle.importKey("raw", bytes, "AES-GCM", false, ["decrypt"]);
+                this.adminKey = descriptor.adminKey && this.accountId === "admin" ? await crypto.subtle.importKey("raw", Uint8Array.from(descriptor.adminKey.match(/../g), pair => parseInt(pair, 16)), "AES-GCM", false, ["decrypt"]) : null;
                 this.manifest = JSON.parse(decoder.decode(await this.decrypt(descriptor.manifest, "manifest")));
                 if (this.manifest.version !== 1 || this.manifest.id !== descriptor.id) throw new Error("Invalid training manifest.");
             }
@@ -110,7 +117,11 @@
                 if (text.length > 10000) throw new Error("Stored value too large.");
                 try { localStorage.setItem(key, text); return true; } catch { return false; }
             }
-            if (operation === "openPage") return this.open(this.descriptor, resourcePath(this.page, args.path).destination);
+            if (operation === "openPage") {
+                const target = resourcePath(this.page, args.path);
+                if (this.resourceEntry(target.path).type !== "text/html") throw new Error("Unknown training page.");
+                return this.open(this.descriptor, target.destination);
+            }
             if (operation === "submitAttempt") return this.submit(args.record);
             const target = resourcePath(this.page, args.path);
             const entry = this.manifest.files[target.path];
