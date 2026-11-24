@@ -70,7 +70,7 @@ class TrainingBrowserTests(unittest.TestCase):
         self.assertLess(len([url for url in requests if url.endswith('.bin')]), 15)
         return page, frame, errors
 
-    def quiz(self, page, frame, company=None):
+    def quiz(self, page, frame, company=None, test='technician'):
         frame.locator('.choice').nth(2).click()
         expect(frame.locator('#start-button')).to_be_enabled(timeout=15000)
         frame.locator('#person-name').fill('Browser Test')
@@ -80,26 +80,32 @@ class TrainingBrowserTests(unittest.TestCase):
         else:
             expect(frame.locator('#person-company')).to_be_hidden()
             expect(frame.locator('#company-fixed')).to_have_text('SubSea7')
-        frame.locator('[name=test-choice][value=technician]').check()
+        frame.locator('[name=test-choice][value="' + test + '"]').check()
         # Capture only within this test browser; nothing is exposed in the production page.
-        frame.locator('body').evaluate('''async () => {
-          window.testBank = await TrainingHost.readJson('questions-technician.json');
+        frame.locator('body').evaluate('''async (element, test) => {
+          window.testBank = await TrainingHost.readJson('questions-' + test + '.json');
+          const selectQuestions = TrainingQuestionSelection.selectQuestions;
+          TrainingQuestionSelection.selectQuestions = (questions, settings) => {
+            const selected = selectQuestions(questions, settings);
+            window.testSelectedQuestions = selected;
+            return selected;
+          };
           window.testEvents = [];
           const original = TrainingHost.submitAttempt;
           TrainingHost.submitAttempt = record => { testEvents.push(record); return original(record); };
           const draw = TrainingCertificate.drawCertificate;
           TrainingCertificate.drawCertificate = spec => { window.testDraft = spec.isTestDraft; return draw(spec); };
-        }''')
+        }''', test)
         frame.locator('#start-button').click()
         expect(frame.locator('#question-view')).to_be_visible(timeout=15000)
 
     def answer(self, frame, correct_count):
         for index in range(20):
             expect(frame.locator('#progress-label')).to_have_text(f'Question {index + 1} of 20')
-            option = frame.locator('body').evaluate('''(element, correct) => {
-                const q = testBank.questions.find(q => q.question === document.getElementById('question-text').textContent);
-                return correct ? q.answer : q.options.find(o => o.id !== q.answer).id;
-            }''', index < correct_count)
+            option = frame.locator('body').evaluate('''(element, spec) => {
+                const q = testSelectedQuestions[spec.index];
+                return spec.correct ? q.answer : q.options.find(o => o.id !== q.answer).id;
+            }''', {'index': index, 'correct': index < correct_count})
             frame.locator('[name=answer][value="' + option + '"]').check()
             frame.locator('#next-button').click()
         expect(frame.locator('#result-view')).to_be_visible()
@@ -132,6 +138,45 @@ class TrainingBrowserTests(unittest.TestCase):
         expect(page.locator('#login-panel')).to_be_visible()
         self.assertIsNone(page.locator('#tool-frame').get_attribute('srcdoc'))
         self.assertEqual(errors, [])
+
+    def test_each_test_and_retry_has_picture_and_hint_minimums(self):
+        for bank in ['technician', 'inspector']:
+            with self.subTest(bank=bank):
+                page, frame, errors = self.start()
+                self.quiz(page, frame, test=bank)
+                available_hints = frame.locator('body').evaluate('() => testBank.questions.filter(q => q.hint).length')
+                draws = []
+                for attempt in range(2):
+                    pictures = 0; hints = 0; identifiers = []
+                    for index in range(20):
+                        expect(frame.locator('#progress-label')).to_have_text(f'Question {index + 1} of 20')
+                        question = frame.locator('body').evaluate('''(element, index) => {
+                            const q = testSelectedQuestions[index];
+                            return {id:q.id, answer:q.answer, text:q.question};
+                        }''', index)
+                        expect(frame.locator('#question-text')).to_have_text(question['text'])
+                        identifiers.append(question['id'])
+                        if frame.locator('#question-picture').is_visible() or frame.locator('#question-options img').count(): pictures += 1
+                        if frame.locator('#hint-button').is_visible():
+                            hints += 1
+                            if hints == 1:
+                                frame.locator('#hint-button').click()
+                                expect(frame.locator('#hint-panel')).to_be_visible()
+                        frame.locator('[name=answer][value="' + question['answer'] + '"]').check()
+                        frame.locator('#next-button').click()
+                    expect(frame.locator('#result-grade')).to_have_text('Pass with Distinction')
+                    self.assertEqual(len(set(identifiers)), 20)
+                    self.assertGreaterEqual(pictures, 5)
+                    if available_hints: self.assertGreaterEqual(hints, 1)
+                    else: self.assertEqual(hints, 0)
+                    events = frame.locator('body').evaluate('() => testEvents.filter(e => e.status === "Finished").map(e => ({hints:e.hintsUsed,score:e.score}))')
+                    self.assertEqual(events[-1], {'hints': 1 if hints else 0, 'score': 20})
+                    draws.append(set(identifiers))
+                    if attempt == 0:
+                        frame.locator('#retry-button').click()
+                        expect(frame.locator('#question-view')).to_be_visible(timeout=15000)
+                self.assertNotEqual(draws[0], draws[1])
+                self.assertEqual(errors, [])
 
     def test_admin_question_bank_is_unlisted_searchable_and_read_only(self):
         page, frame, errors = self.start(account='admin', mobile=True)
