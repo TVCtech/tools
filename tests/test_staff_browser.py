@@ -109,6 +109,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#tools-panel")).to_be_hidden()
             self.login(page, "technician", remember=True)
             expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
+            expect(page.locator('#tool-list a[href="Calsis160WheelSpacerCalc.html"]')).to_have_attribute('target', '_blank')
             expect(page.locator("#tool-list button")).to_have_count(1)
             page.get_by_role("button", name="Technician test page").click()
             page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()

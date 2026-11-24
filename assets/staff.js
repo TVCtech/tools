@@ -24,6 +24,7 @@
     function clearViewer() {
         trainingViewer?.close();
         $("tool-frame").removeAttribute("srcdoc"); $("tool-frame").src = "about:blank";
+        $("tool-frame").setAttribute("sandbox", "allow-scripts allow-forms allow-downloads allow-modals");
     }
     function lock() {
         operation++; unlocked = false; bundle = null;
@@ -107,8 +108,17 @@
             $("tool-list").append(element);
         }
         if (data.training) button(data.training.label, "Manuals and training test", () => openTraining(), true);
+        const wheelLink = document.createElement("a");
+        wheelLink.className = "tool-button";
+        wheelLink.href = "Calsis160WheelSpacerCalc.html";
+        wheelLink.target = "_blank"; wheelLink.rel = "noopener";
+        const wheelTitle = document.createElement("strong"), wheelDetail = document.createElement("small");
+        wheelTitle.textContent = "CALSIS 160 Wheel Spacer Calculator";
+        wheelDetail.textContent = "Open the wheel spacer calculator";
+        wheelLink.append(wheelTitle, wheelDetail); $("tool-list").append(wheelLink);
         data.tools.forEach(tool => button(tool.title, tool.access === "admin" ? "Admin" : "Technician", () => {
             clearViewer(); $("tools-panel").hidden = true; $("viewer").hidden = false;
+            if (config.role === "admin" && tool.id === "training-results-setup") $("tool-frame").setAttribute("sandbox", "allow-scripts allow-forms allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox");
             $("tool-title").textContent = tool.title; $("tool-frame").title = tool.title; $("tool-frame").srcdoc = tool.html;
         }));
         openRoute();
