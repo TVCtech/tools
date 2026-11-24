@@ -291,7 +291,8 @@ requires a deployed Apps Script `/exec` endpoint and explicit enablement. The
 host requires a matching readable receipt before reporting success; failed
 saves can be retried without duplicating events. Central recording is not
 claimed while configuration is missing. Company reports can contain selected
-completed-attempt fields while the master keeps the full technical event log.
+completed-attempt fields. The master can have a simple Results tab alongside
+the full technical Attempts event log.
 Receiver changes require updating the existing Google deployment; a website
 build alone does not deploy Apps Script. Keep training sheets Restricted.
 
