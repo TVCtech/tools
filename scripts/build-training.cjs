@@ -85,6 +85,9 @@ function buildTraining({source, output, keys, configuration = {}}) {
     }
     collect(source);
     if (!resources.has("index.html")) throw new Error("Training landing page is missing.");
+    const access = resources.has("access.json") ? JSON.parse(resources.get("access.json").toString("utf8")) : {version: 1, adminOnly: []};
+    if (access.version !== 1 || !Array.isArray(access.adminOnly) || access.adminOnly.some(resource => typeof resource !== "string" || !resources.has(resource) || resolveResource("index.html", resource) !== resource)) throw new Error("Invalid training access configuration.");
+    const adminOnly = new Set(access.adminOnly);
     for (const [filename, bytes] of resources) {
         if (filename.endsWith(".html")) resources.set(filename, packPage(bytes.toString("utf8"), filename, resources));
         if (filename.endsWith(".css") && /url\s*\(/i.test(bytes.toString("utf8"))) throw new Error("Training CSS asset URLs need explicit packaging.");
@@ -92,9 +95,11 @@ function buildTraining({source, output, keys, configuration = {}}) {
     keys.trainingPackages ??= {};
     const state = keys.trainingPackages[ID] ??= {key: crypto.randomBytes(32).toString("hex"), cache: {}};
     if (!/^[a-f0-9]{64}$/.test(state.key)) throw new Error("Invalid private training key.");
+    if (adminOnly.size) state.adminKey ??= crypto.randomBytes(32).toString("hex");
+    if (adminOnly.size && !/^[a-f0-9]{64}$/.test(state.adminKey)) throw new Error("Invalid private admin training key.");
     const key = Buffer.from(state.key, "hex"), files = {}, manifest = {version: 1, id: ID, entry: "index.html", files: {}};
-    function publish(bytes, resource) {
-        const hash = sha(bytes), previous = state.cache[resource];
+    function publish(bytes, resource, restricted = false) {
+        const hash = sha(restricted ? Buffer.concat([Buffer.from("admin\0"), bytes]) : bytes), previous = state.cache[resource];
         let filename = previous?.hash === hash ? previous.file : null;
         let encrypted;
         if (filename && /^assets\/training\/calsis-160\/[a-f0-9]{64}\.bin$/.test(filename) && fs.existsSync(path.join(output, filename))) {
@@ -102,7 +107,7 @@ function buildTraining({source, output, keys, configuration = {}}) {
             if (sha(encrypted) !== path.basename(filename, ".bin")) filename = null;
         } else filename = null;
         if (!filename) {
-            encrypted = encrypt(bytes, key, resource);
+            encrypted = encrypt(bytes, restricted ? Buffer.from(state.adminKey, "hex") : key, resource);
             filename = "assets/training/" + ID + "/" + sha(encrypted) + ".bin";
         }
         files[filename] = encrypted;
@@ -110,7 +115,8 @@ function buildTraining({source, output, keys, configuration = {}}) {
         return filename;
     }
     for (const [resource, bytes] of resources) {
-        manifest.files[resource] = {url: publish(bytes, resource), type: TYPES[path.posix.extname(resource)]};
+        const restricted = adminOnly.has(resource);
+        manifest.files[resource] = {url: publish(bytes, resource, restricted), type: TYPES[path.posix.extname(resource)], ...(restricted ? {access: "admin"} : {})};
     }
     const manifestUrl = publish(Buffer.from(JSON.stringify(manifest)), "manifest");
     const profiles = configuration.accounts || {ss7: {company: "SubSea7"}, training: {company: null}, admin: {company: null}, technician: {company: null}};
@@ -121,6 +127,7 @@ function buildTraining({source, output, keys, configuration = {}}) {
             const profile = profiles[account.id];
             return {
                 id: ID, label: "CALSIS 160 Training", key: state.key, manifest: manifestUrl,
+                ...(account.id === "admin" && adminOnly.size ? {adminKey: state.adminKey} : {}),
                 company: profile.company || null,
                 recording: {enabled: Boolean(settings.resultsRecording?.enabled && configuration.endpoint && profile.token), endpoint: configuration.endpoint || null, token: profile.token || null},
             };

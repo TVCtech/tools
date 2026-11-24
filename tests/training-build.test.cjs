@@ -85,3 +85,30 @@ test("publication refuses shortened quizzes, debug tools, public source and brok
         assert.throws(() => buildTraining({source: f.source, output: f.output, keys: {}}), /Missing training picture/);
     } finally { fs.rmSync(f.base, {recursive: true, force: true}); }
 });
+test("unlisted admin resources use a separate key and cannot reuse shared ciphertext", async () => {
+    const f = fixture();
+    try {
+        const args = {source: f.tools, output: f.output, keyFile: f.keyFile, trainingSource: f.source};
+        await build({...args, passwords: {technician: "fixture-technician-password", admin: "fixture-admin-password"}});
+        const before = await account(f.output, "technician", "fixture-technician-password");
+        const oldManifest = JSON.parse(decrypt(fs.readFileSync(path.join(f.output, before.training.manifest)), before.training.key, "manifest"));
+        fs.writeFileSync(path.join(f.source, "access.json"), JSON.stringify({version: 1, adminOnly: ["module.html"]}));
+        await build(args);
+        const admin = await account(f.output, "admin", "fixture-admin-password");
+        const technician = await account(f.output, "technician", "fixture-technician-password");
+        assert.match(admin.training.adminKey, /^[a-f0-9]{64}$/);
+        assert.equal(technician.training.adminKey, undefined);
+        assert.equal(technician.training.key, before.training.key);
+        const manifest = JSON.parse(decrypt(fs.readFileSync(path.join(f.output, admin.training.manifest)), admin.training.key, "manifest"));
+        assert.equal(manifest.files["index.html"].url, oldManifest.files["index.html"].url);
+        assert.notEqual(manifest.files["module.html"].url, oldManifest.files["module.html"].url);
+        assert.equal(manifest.files["module.html"].access, "admin");
+        const bytes = fs.readFileSync(path.join(f.output, manifest.files["module.html"].url));
+        assert.throws(() => decrypt(bytes, technician.training.key, "module.html"));
+        assert(JSON.parse(decrypt(bytes, admin.training.adminKey, "module.html")).html.includes("Private module fixture"));
+        await build(args);
+        assert.deepEqual((await account(f.output, "admin", "fixture-admin-password")).training, admin.training);
+        fs.writeFileSync(path.join(f.source, "access.json"), JSON.stringify({version: 1, adminOnly: ["missing.html"]}));
+        assert.throws(() => buildTraining({source: f.source, output: f.output, keys: {}}), /access configuration/);
+    } finally { fs.rmSync(f.base, {recursive: true, force: true}); }
+});

@@ -273,6 +273,13 @@ resource paths. Only encrypted `.bin` files enter `assets/training/` here.
 Login does not fetch the course. Opening training loads the requested page and
 its scripts/styles; pictures are decrypted as needed, including pictures in JSON.
 
+Optional private-source `access.json` (`version: 1`, `adminOnly: [resource paths]`)
+marks resources that require a separate Admin key. Only the Admin account bundle
+receives that key; the viewer checks access before fetching. The access list must
+include each private page's own scripts/styles. Normal course resources retain
+their existing key and cached ciphertext. An unlisted page is kept out of course
+navigation and search indexes; its direct URL still requires the Admin login.
+
 ```sh
 python3 scripts/rebuild_staff.py --training-source /private/repo/training/calsis-160 --training-configuration /private/training-host-config.json
 ```
