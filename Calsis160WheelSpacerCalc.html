@@ -371,6 +371,15 @@
 </div>
 
 <script>
+  // Returning in the same tab retains a session-only login as well as remembered access.
+  (() => {
+    const returnAccount = new URLSearchParams(location.search).get("user");
+    if (/^[a-z][a-z0-9-]{1,39}$/.test(returnAccount || "") && !["users", "staff", "index"].includes(returnAccount)) {
+      const returnLink = document.querySelector(".back-button");
+      returnLink.href = returnAccount + ".html";
+      returnLink.textContent = "← Back to Your Tools";
+    }
+  })();
   const OFFSET         = 81.15;
   const WHEEL_STACK    = 7.5;
   const THREAD_DEPTH   = 22;
