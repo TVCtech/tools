@@ -67,10 +67,10 @@ function validAccount(account) {
     return account.role === (account.id === "admin" ? "admin" : "technician");
 }
 
-function page(role, encrypted, account = DEFAULT_ACCOUNTS.find(entry => entry.id === role), accounts = DEFAULT_ACCOUNTS) {
+function page(role, encrypted, account = DEFAULT_ACCOUNTS.find(entry => entry.id === role), {blankAccount = false} = {}) {
     return fs.readFileSync(path.join(__dirname, "staff-page.html"), "utf8")
         .replaceAll("@@TITLE@@", escapeHtml(account.label))
-        .replace("@@ACCOUNT@@", account.id)
+        .replace("@@ACCOUNT@@", blankAccount ? "" : account.id)
         .replace("@@CONFIG@@", JSON.stringify({ role, account: account.id, accountLabel: account.label, encrypted }).replaceAll("<", "\\u003c"));
 }
 
@@ -202,15 +202,16 @@ async function build({ source, passwords, keyFile, output = ROOT, companyAccount
         const plain = JSON.stringify({ version: 1, role: account.role, account: account.id, tools: selected, ...(packageInfo ? {training: packageInfo} : {}) });
         const key = ROLES.includes(account.id) ? keys.roles[account.id] : keys.accounts[account.id];
         const encrypted = await codec.encodeWithHashedPassword(plain, key.hash);
-        files[account.id + ".html"] = page(account.role, {
+        const pageConfiguration = {
             staticryptEncryptedMsgUniqueVariableName: encrypted,
             staticryptSaltUniqueVariableName: salts[account.id],
             isRememberEnabled: false,
             rememberDurationInDays: 0,
-        }, account, accounts);
+        };
+        files[account.id + ".html"] = page(account.role, pageConfiguration, account);
+        if (account.id === "technician") files["users.html"] = page(account.role, pageConfiguration, account, {blankAccount: true});
     }
     files["staff-salts.json"] = JSON.stringify(salts, null, 2) + "\n";
-    files["users.html"] = files["technician.html"];
     saveFiles(output, files);
     if (keyPath && JSON.stringify(keys) !== originalKeys) saveKeys(keyPath, keys);
     if (fs.existsSync(path.join(output, "staff-accounts.json"))) fs.unlinkSync(path.join(output, "staff-accounts.json"));
@@ -219,7 +220,7 @@ async function build({ source, passwords, keyFile, output = ROOT, companyAccount
 async function main() {
     if (process.argv[2] === "--prepare") {
         if (ROLES.some((role) => fs.existsSync(path.join(ROOT, role + ".html")))) throw new Error("Role pages already exist; preparation will not overwrite them.");
-        saveFiles(ROOT, { ...assets(), "users.html": page("technician", null), ...Object.fromEntries(ROLES.map((role) => [role + ".html", page(role, null)])) });
+        saveFiles(ROOT, { ...assets(), "users.html": page("technician", null, undefined, {blankAccount: true}), ...Object.fromEntries(ROLES.map((role) => [role + ".html", page(role, null)])) });
         return;
     }
     const input = JSON.parse(fs.readFileSync(0, "utf8"));

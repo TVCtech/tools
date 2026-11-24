@@ -93,6 +93,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page).to_have_url(self.url + "/users.html")
             expect(page.get_by_role("heading", name="Users", exact=True)).to_be_visible()
             expect(page.locator("#role")).to_be_visible()
+            expect(page.locator("#role")).to_have_value("")
             page.locator("#password").fill("visible test input")
             page.get_by_role("button", name="Show password", exact=True).click()
             expect(page.locator("#password")).to_have_attribute("type", "text")
@@ -167,6 +168,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#tools-panel")).to_be_visible(timeout=30000)
             page.locator("#logout").click()
             expect(page).to_have_url(self.url + "/users.html?logged-out=1")
+            expect(page.locator("#role")).to_have_value("")
             page.add_init_script("Object.defineProperty(window, 'localStorage', {get() {throw new Error('blocked');}})")
             self.login(page, "admin", remember=True)
             expect(page.locator("#tool-list button")).to_have_count(2, timeout=30000)
@@ -174,6 +176,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#notice")).to_be_visible()
             page.locator("#logout").click()
             expect(page).to_have_url(self.url + "/users.html?logged-out=1")
+            expect(page.locator("#role")).to_have_value("")
         finally:
             context.close()
 

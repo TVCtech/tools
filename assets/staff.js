@@ -2,6 +2,7 @@
 (() => {
     "use strict";
     const prefix = "tvc-tools.staff.v1.", epochKey = prefix + "logout", lastKey = prefix + "last-account";
+    const genericLoginPage = /\/(users|staff)\.html$/.test(location.pathname);
     const $ = id => document.getElementById(id);
     let config = $("staff-config") ? JSON.parse($("staff-config").textContent) : null;
     let operation = 0, unlocked = false, bundle = null, trainingViewer = null, channel;
@@ -31,6 +32,7 @@
         if (!config) return;
         clearViewer(); $("tool-list").replaceChildren(); $("tool-title").textContent = "";
         $("tools-panel").hidden = true; $("viewer").hidden = true; $("login-panel").hidden = false;
+        $("role").value = genericLoginPage ? "" : accountId();
         $("password").value = ""; setPasswordVisible(false); $("login-button").disabled = false;
     }
     function remoteLogout() {
@@ -57,7 +59,7 @@
     if (new URLSearchParams(location.search).has("logged-out") && $("notice")) $("notice").textContent = "Logged out of all accounts on this browser.";
     if (!config) return;
     $("show-password").addEventListener("click", () => setPasswordVisible($("password").type === "password"));
-    $("role").value = accountId();
+    $("role").value = genericLoginPage ? "" : accountId();
     $("role").addEventListener("input", () => { operation++; $("password").value = ""; setPasswordVisible(false); $("login-button").disabled = false; $("login-message").textContent = ""; });
 
     function showMenu(updateHistory = false) {
@@ -171,10 +173,9 @@
         }
         observedEpoch = read("localStorage", epochKey) || "0";
         $("login-button").disabled = false; $("login-message").textContent = "";
-        const generic = /\/(users|staff)\.html$/.test(location.pathname);
         const previous = read("localStorage", lastKey) || read("sessionStorage", lastKey);
-        const id = generic && previous && /^[a-z][a-z0-9-]{1,39}$/.test(previous) ? previous : accountId();
-        $("role").value = id;
+        const id = genericLoginPage && previous && /^[a-z][a-z0-9-]{1,39}$/.test(previous) ? previous : accountId();
+        $("role").value = genericLoginPage ? "" : id;
         for (const storage of ["localStorage", "sessionStorage"]) {
             const saved = read(storage, key(id));
             if (!saved) continue;

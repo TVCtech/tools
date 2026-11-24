@@ -109,7 +109,8 @@ exports. Algorithm checks include an independent exhaustive small-case oracle.
 
 `users.html` opens a login form with an **Account** text field and a
 **Show/Hide password** button. The old `staff.html` bookmark redirects here.
-Enter the account name supplied by the owner. Company logins receive technician
+The shared Users page starts with an empty account field. Enter the account
+name supplied by the owner. Company logins receive technician
 tools; Admin also receives admin tools. Each account has its own encrypted
 page, password and browser login record. A customer directory is not displayed.
 Company logins are shared credentials, rather than individual employee accounts.
