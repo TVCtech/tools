@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>@@TITLE@@ · TVC Tools</title>
-  <link rel="stylesheet" href="assets/staff.css?v=3">
+  <link rel="stylesheet" href="assets/staff.css?v=4">
   <script src="assets/staticrypt.js" defer></script>
-  <script src="assets/staff.js?v=3" defer></script>
+  <script src="assets/training-viewer.js?v=1" defer></script>
+  <script src="assets/staff.js?v=4" defer></script>
 </head>
 <body>
   <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
@@ -16,7 +17,8 @@
     <h1>Users</h1>
     <form id="login-form" class="card">
       <label for="role">Account</label>
-      <select id="role">@@ACCOUNTS@@</select>
+      <input id="role" type="text" autocomplete="username" value="@@ACCOUNT@@" spellcheck="false" autocapitalize="none" required aria-describedby="account-help">
+      <p id="account-help" class="muted">Enter the account name provided by your trainer.</p>
       <label for="password">Password</label>
       <div class="password-entry">
         <input id="password" type="password" autocomplete="current-password" required>

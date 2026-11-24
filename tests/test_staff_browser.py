@@ -99,8 +99,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#password")).to_have_value("visible test input")
             page.get_by_role("button", name="Hide password", exact=True).click()
             expect(page.locator("#password")).to_have_attribute("type", "password")
-            page.locator("#role").select_option("admin")
-            expect(page).to_have_url(self.url + "/admin.html")
+            page.locator("#role").fill("admin")
             expect(page.locator("#role")).to_have_value("admin")
             expect(page.locator("#password")).to_have_value("")
             page.goto(self.url + "/staff.html")
@@ -140,7 +139,7 @@ class StaffBrowserTests(unittest.TestCase):
             expect(page.locator("#login-panel")).to_be_visible()
             expect(page.locator("#tools-panel")).to_be_hidden()
             self.assertIsNone(page.locator("#tool-frame").get_attribute("srcdoc"))
-            self.assertEqual(admin.evaluate("Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout'))"), [])
+            self.assertEqual(admin.evaluate("Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout') && !k.endsWith('.last-account'))"), [])
             admin.go_back()
             # Frame navigation can add history entries at the same outer URL.
             expect(admin).to_have_url(re.compile(re.escape(self.url + "/admin.html") + r"(\?.*)?$"))
@@ -182,12 +181,10 @@ class StaffBrowserTests(unittest.TestCase):
         try:
             page = context.pages[0]
             page.goto(self.url + "/users.html")
-            expect(page.locator("#role option")).to_have_text([
-                "Technician", "Admin", "SS7", "PTL", "Training",
-            ])
+            expect(page.locator("#role")).to_have_attribute("type", "text")
+            expect(page.locator("#role option")).to_have_count(0)
             for account, label in [("ss7", "SS7"), ("ptl", "PTL"), ("training", "Training")]:
-                page.locator("#role").select_option(account)
-                expect(page).to_have_url(self.url + f"/{account}.html")
+                page.goto(self.url + f"/{account}.html")
                 expect(page.locator("#role")).to_have_value(account)
                 expect(page.locator("#login-button")).to_be_enabled()
                 # Each company can unlock its own Technician bundle.
@@ -200,9 +197,9 @@ class StaffBrowserTests(unittest.TestCase):
                 page.get_by_role("button", name="Technician test page").click()
                 page.frame_locator("#tool-frame").get_by_role("button", name="Test button").click()
                 expect(page.frame_locator("#tool-frame").locator("#result")).to_have_text("The technician tool is working.")
-                page.goto(self.url + "/users.html")
+                page.goto(self.url + "/technician.html")
             self.assertEqual(sorted(page.evaluate(
-                "Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout'))"
+                "Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout') && !k.endsWith('.last-account'))"
             )), ["tvc-tools.staff.v1.ptl", "tvc-tools.staff.v1.ss7", "tvc-tools.staff.v1.training"])
             other = context.new_page()
             other.goto(self.url + "/ss7.html")
@@ -232,7 +229,7 @@ class StaffBrowserTests(unittest.TestCase):
                     )
                     expect(page.locator("#tools-panel")).to_be_hidden()
             self.assertEqual(page.evaluate(
-                "Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout'))"
+                "Object.keys(localStorage).filter(k => k.startsWith('tvc-tools.staff.v1.') && !k.endsWith('.logout') && !k.endsWith('.last-account'))"
             ), [])
             page.set_viewport_size({"width": 390, "height": 844})
             self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))

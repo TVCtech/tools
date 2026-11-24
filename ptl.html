@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>PTL · TVC Tools</title>
-  <link rel="stylesheet" href="assets/staff.css?v=3">
+  <link rel="stylesheet" href="assets/staff.css?v=4">
   <script src="assets/staticrypt.js" defer></script>
-  <script src="assets/staff.js?v=3" defer></script>
+  <script src="assets/training-viewer.js?v=1" defer></script>
+  <script src="assets/staff.js?v=4" defer></script>
 </head>
 <body>
   <header><a href="users.html">Users</a><a href="index.html">Public tools</a><span class="spacer"></span><button type="button" id="logout">Logout</button></header>
@@ -16,7 +17,8 @@
     <h1>Users</h1>
     <form id="login-form" class="card">
       <label for="role">Account</label>
-      <select id="role"><option value="technician">Technician</option><option value="admin">Admin</option><option value="ss7">SS7</option><option value="ptl">PTL</option><option value="training">Training</option></select>
+      <input id="role" type="text" autocomplete="username" value="ptl" spellcheck="false" autocapitalize="none" required aria-describedby="account-help">
+      <p id="account-help" class="muted">Enter the account name provided by your trainer.</p>
       <label for="password">Password</label>
       <div class="password-entry">
         <input id="password" type="password" autocomplete="current-password" required>
@@ -37,6 +39,6 @@
     <div id="viewer-bar"><button id="back-to-tools" type="button">← All tools</button><strong id="tool-title"></strong></div>
     <iframe id="tool-frame" title="User tool" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe>
   </section>
-  <script id="staff-config" type="application/json">{"role":"technician","account":"ptl","accountLabel":"PTL","accounts":[{"id":"technician","label":"Technician","role":"technician"},{"id":"admin","label":"Admin","role":"admin"},{"id":"ss7","label":"SS7","role":"technician"},{"id":"ptl","label":"PTL","role":"technician"},{"id":"training","label":"Training","role":"technician"}],"encrypted":{"staticryptEncryptedMsgUniqueVariableName":"d0c5d1fa8b166a3bad6e3fbea0d8b20614b5e99bee87bd97f66131dbcf5dc8016874b7c2b29ca3794a1aeafb9123c8b0be9343b976052d79a6839a61f34e9bc50dda0b26a240514c72e2e03446d4f261c2993f338d6f4ee2c07ffc313ccc68b0947eab71a1ea6e5f7574c669330df6dcd773bdbe14ce3d7512a1bbfbaa5a187fcf1df3e736c91141575731903885e48a49f21bf0791735ecb02c7d8e677c07d52769df7eab06eb3cda0e946049c95ead54fdcdd2e0b6c8cfe651fa4605467b93f9041debd93ceb3333ab1a1ee4e5cb2345e7ea532488801c2064e35e36bd07bb1c2edd32883fa8b97ef3bdb98fefb59b551c4332bedc58c210e144560b4ab817137d44d5ee2339aa5a10b412fbae98ba13583673d75687667677e39ee3761f3973a8dc8c2753f54a924729bf9d0d4d75f31796e632bef55d3411b2567c7524a7222eab4e880d28518df9a43e8d919dab30c51d60348d5b101c92fe6e481171ff49c1e6833a91df166bba2cdf4736414b18b2c4cf3d717eecc64f6c71b32d60b87ff0b97d0f6b766cc7feed6dedf8e08e263ff9f3b856dba5afa61f1236d8687b0068aa344f97c884d2447014b2158a584f8e9ec7294fa5b205c770bf30b5e30f6ced9f58c2a78f9197f999d699993931a52a3a5936656294042f29de3bf1d625f4d0a457ec49dce618106e48d7cbbb348ec9be6da325fef651d2352691aa776d16382404e35ef21c2754993e206be13346b3c1e220259487faacf3bf52fe55f85ebe1eca6963e60add637694be73e537accef7ca43ae23c940c8fa040edec9cb67d42123c3610c2ed676c9ddc3293e8a26c659cbdea81e2ef1b118b0c0c54fbcd93df94ca2a929d38cf1e04e9697cb4250c997998976b6644d5d308c4892a8e7e56f5f411c25815a5c525992947ec2b7ac4301e07071861f832d0bb609e7fd7a5579ce871b77d6213c5da77efce0dc06bd7d3e8bc7fc76f8807faf5f38d01a32d7e102f93b11380132802763c0520d48503d820005943567f2028b2022bb87a0","staticryptSaltUniqueVariableName":"3f9e8c1b618992e7f52ca29c1af37b3e","isRememberEnabled":false,"rememberDurationInDays":0}}</script>
+  <script id="staff-config" type="application/json">{"role":"technician","account":"ptl","accountLabel":"PTL","encrypted":{"staticryptEncryptedMsgUniqueVariableName":"32235b0bd183621e2af087fe81ebce2211aad82cadf6ba1f0b4f99dc1a6e687fe02508b540639d87ef1f1ef3a304d0d3834c13d70607fc08d3447c0438d4703658b1097af77ff8d58141b8e444bea409df01c3fd80ae0b82d171bd195a74a43897541491e25d22495295020d66609cb80820d11333308b32db530788e6c59cd05053ffdd8443d8e40433def4a8c943bf725007b0cf7e283bba6da1db44a72ae7ab4845e71bb4ab9770abf1374b2f9214f6a218f4f6db56c4b1ad4b5ec5897729485616c8f98cb85a5951bfffaa31e0f97a624af8463b1a1904670121c5a6f37a5219190fdd1de6870f5dc4213a6543a3badf90545375b7a2f2817888a47640b8beacbfd15c57d3d6ba62792db4ecab9fbb5c8b954d684f404c3477cba61dbb5573201ef3350caa43d7ede23825feb124ca8e92911e2ae278fe1429c04e26d607de7cf1d4240d7b969d26d71dd12908be9b612e7342722ec08c07eabb918d7f32431fd05022a1bb8b08a1704857d4f49ac1f5288762a1a8756b002dea3ecad39d307a23eafe9082d88372080b0cdebd6573e41743c584d2db4bad3eccd68c3bf3ec42119fe13f3185f8e0a7f5d850a0bf1967a0bc8e9a42693b46ec6618c001e7a9399744d0038e10166b26996b956fb142f7c02513d4398d2eb082c8f6590e2d53ec935c5f2a5f9425b1b023d40f9eefc4194a6924916668ad9d4c82b33b6c4b36196edd26ecc59472faee1bd5376b5d84ad8d126dda91eb0a2c50e013e9d7a9cb08e1df5289302670910201eca0f40f423e0f054281d4fbf80a7b82bba81d0f44e0293681393cf5860748a769ee42f30f0e8a1c0335dec67db3ff80015ebcb59bdab03d0999d1a268ef2b9eb8b932defcc5de11399f81ec4381871afe1aa23a3af1f8af6e64dd36e299ac116fc1091240c9717a8e199023b5e50ead218f5094a8edec9fe7cecebfb7d2230cb06e4bb88869fdaf21ae0a7b7e1099cea51f9d0caa785e2791c1f68277e24e5e149767dc6d25fcc8cbf8535b827cdd5f727f225a","staticryptSaltUniqueVariableName":"3f9e8c1b618992e7f52ca29c1af37b3e","isRememberEnabled":false,"rememberDurationInDays":0}}</script>
 </body>
 </html>
