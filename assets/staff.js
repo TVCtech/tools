@@ -30,7 +30,7 @@
     function lock() {
         operation++; unlocked = false; bundle = null;
         if (!config) return;
-        clearViewer(); $("tool-list").replaceChildren(); $("tool-title").textContent = "";
+        clearViewer(); $("tool-list").replaceChildren(); document.body.classList.remove("tool-open");
         $("tools-panel").hidden = true; $("viewer").hidden = true; $("login-panel").hidden = false;
         $("your-tools-home").href = "users.html";
         $("role").value = genericLoginPage ? "" : accountId();
@@ -64,18 +64,19 @@
     $("role").addEventListener("input", () => { operation++; $("password").value = ""; setPasswordVisible(false); $("login-button").disabled = false; $("login-message").textContent = ""; });
 
     function showMenu(updateHistory = false) {
+        document.body.classList.remove("tool-open");
         clearViewer(); $("viewer").hidden = true; $("tools-panel").hidden = false;
         if (updateHistory && location.hash) history.pushState(null, "", location.pathname + location.search);
     }
-    $("back-to-tools").addEventListener("click", () => showMenu(true));
     $("your-tools-home").addEventListener("click", event => {
         if (unlocked && !event.ctrlKey && !event.metaKey && !event.shiftKey) { event.preventDefault(); showMenu(true); }
     });
     async function openTraining(path = "index.html", updateHistory = true) {
         if (!unlocked || !bundle?.training) return;
         const request = operation;
+        document.body.classList.add("tool-open");
         $("tools-panel").hidden = true; $("viewer").hidden = false;
-        $("tool-title").textContent = bundle.training.label;
+        $("tool-frame").title = bundle.training.label;
         $("notice").textContent = "Opening training…";
         try {
             if (!trainingViewer) {
@@ -102,8 +103,10 @@
         trainingViewer?.destroy(); trainingViewer = null;
         $("login-panel").hidden = true;
         $("your-tools-home").href = accountId() + ".html";
-        $("tools-panel").querySelector("h1").textContent = (config.accountLabel || config.role) + " tools";
-        $("access-label").textContent = config.role === "admin" ? "Admin access includes all technician tools."
+        const companyHome = accountId() === "ss7" ? data.training?.company || config.accountLabel : null;
+        $("tools-panel").querySelector("h1").textContent = companyHome ? companyHome + " Home Page" : (config.accountLabel || config.role) + " tools";
+        $("access-label").hidden = Boolean(companyHome);
+        $("access-label").textContent = companyHome ? "" : config.role === "admin" ? "Admin access includes all technician tools."
             : accountId() === "technician" ? "Technician access" : config.accountLabel + " · Technician access";
         $("tool-list").replaceChildren();
         function button(label, description, action, training = false) {
@@ -124,8 +127,9 @@
         wheelLink.append(wheelTitle, wheelDetail); $("tool-list").append(wheelLink);
         data.tools.forEach(tool => button(tool.title, tool.access === "admin" ? "Admin" : "Technician", () => {
             clearViewer(); $("tools-panel").hidden = true; $("viewer").hidden = false;
+            document.body.classList.add("tool-open");
             if (config.role === "admin" && tool.id === "training-results-setup") $("tool-frame").setAttribute("sandbox", "allow-scripts allow-forms allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox");
-            $("tool-title").textContent = tool.title; $("tool-frame").title = tool.title; $("tool-frame").srcdoc = tool.html;
+            $("tool-frame").title = tool.title; $("tool-frame").srcdoc = tool.html;
         }));
         openRoute();
     }

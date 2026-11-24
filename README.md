@@ -114,8 +114,10 @@ name supplied by the owner. Company logins receive technician
 tools; Admin also receives admin tools. Each account has its own encrypted
 page, password and browser login record. A customer directory is not displayed.
 Company logins are shared credentials, rather than individual employee accounts.
-The user-area header and every framed tool return to **Your tools**, showing
-only that account's assigned tools. There is no public-tools menu link in the
+The **Your tools** link in the top header returns from every framed tool to
+that account's assigned tools. The duplicate viewer return bar is omitted so
+tools fill the space below the header. SS7 sees **SubSea7 Home Page** without
+an access-role subtitle. There is no public-tools menu link in the
 user-area navigation.
 Every account menu includes a link to the public CALSIS wheel spacer calculator.
 It opens in the same tab with an account-name return parameter, so Back to Your
