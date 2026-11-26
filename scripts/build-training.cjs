@@ -4,7 +4,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const {parse, serialize} = require("parse5");
 
-const TYPES = {".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml"};
+const TYPES = {".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".pdf": "application/pdf", ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml"};
 const ID = "calsis-160";
 const sha = data => crypto.createHash("sha256").update(data).digest("hex");
 
@@ -52,7 +52,8 @@ function packPage(html, filename, available) {
                 set("target", "_blank"); set("rel", "noopener noreferrer");
             } else {
                 if (!href.startsWith("#") && !available.has(resolveResource(filename, href))) throw new Error("Broken training page link.");
-                set("data-training-link", href); set("href", "#");
+                // Download handlers read the original href before asking assetUrl for a blob.
+                if (attr("download") === undefined) { set("data-training-link", href); set("href", "#"); }
             }
         }
         node.childNodes = (node.childNodes || []).filter(child => walk(child) !== false);

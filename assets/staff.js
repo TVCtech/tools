@@ -80,7 +80,7 @@
         $("notice").textContent = "Opening training…";
         try {
             if (!trainingViewer) {
-                const response = await fetch("assets/training-host.js?v=1");
+                const response = await fetch("assets/training-host.js?v=2");
                 if (!response.ok) throw new Error("Training helper unavailable.");
                 const helperText = await response.text();
                 if (!unlocked || operation !== request) return;

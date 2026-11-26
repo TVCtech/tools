@@ -7,10 +7,10 @@
     const pending = new Map(), pictures = new Map();
     let resolveReady;
     const ready = new Promise(resolve => { resolveReady = resolve; });
-    function request(operation, args) {
+    function request(operation, args, timeoutMs = 30000) {
         return ready.then(() => new Promise((resolve, reject) => {
             const id = ++sequence;
-            const timer = setTimeout(() => { pending.delete(id); reject(new Error("Training request timed out.")); }, 30000);
+            const timer = setTimeout(() => { pending.delete(id); reject(new Error("Training request timed out.")); }, timeoutMs);
             pending.set(id, {resolve, reject, timer});
             port.postMessage({id, operation, args});
         }));
@@ -49,7 +49,13 @@
         async assetUrl(relativePath) {
             if (!context) return relativePath;
             const absolute = pageUrl(relativePath).pathname;
-            if (!pictures.has(absolute)) pictures.set(absolute, request("asset", {path: relativePath}).then(({bytes, type}) => URL.createObjectURL(new Blob([bytes], {type}))));
+            if (!pictures.has(absolute)) {
+                const timeoutMs = absolute.toLowerCase().endsWith(".pdf") ? 180000 : 30000;
+                const promise = request("asset", {path: relativePath}, timeoutMs)
+                    .then(({bytes, type}) => URL.createObjectURL(new Blob([bytes], {type})))
+                    .catch(error => { if (pictures.get(absolute) === promise) pictures.delete(absolute); throw error; });
+                pictures.set(absolute, promise);
+            }
             return pictures.get(absolute);
         },
         openPage(relativePath, options = {}) {
@@ -90,6 +96,7 @@
     });
     parent.postMessage({type: "tvc-training-ready", nonce: context.nonce}, context.hostOrigin);
     document.addEventListener("click", event => {
+        if (event.defaultPrevented) return;
         const link = event.target.closest("a");
         if (!link) return;
         const target = link.dataset.trainingLink || link.getAttribute("href");

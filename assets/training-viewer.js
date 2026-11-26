@@ -3,7 +3,7 @@
     "use strict";
     const decoder = new TextDecoder(), encoder = new TextEncoder();
     const htmlSafe = text => text.replaceAll("</script", "<\\/script");
-    const MIME = new Set(["text/html", "text/javascript", "text/css", "application/json", "image/webp", "image/png", "image/jpeg", "image/svg+xml"]);
+    const MIME = new Set(["text/html", "text/javascript", "text/css", "application/json", "application/pdf", "image/webp", "image/png", "image/jpeg", "image/svg+xml"]);
     function resourcePath(page, reference) {
         if (typeof reference !== "string" || reference.includes("\\") || reference.includes("\0")) throw new Error("Invalid resource.");
         const target = new URL(reference, "https://training.invalid/" + page);
@@ -126,7 +126,7 @@
             const target = resourcePath(this.page, args.path);
             const entry = this.manifest.files[target.path];
             if (operation === "readJson" && entry?.type === "application/json") return JSON.parse(decoder.decode(await this.resource(target.path)));
-            if (operation === "asset" && entry?.type.startsWith("image/")) return {bytes: await this.resource(target.path), type: entry.type};
+            if (operation === "asset" && (entry?.type.startsWith("image/") || entry?.type === "application/pdf")) return {bytes: await this.resource(target.path), type: entry.type};
             throw new Error("Unsupported training request.");
         }
         async submit(record) {
