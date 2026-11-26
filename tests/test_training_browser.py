@@ -5,6 +5,7 @@ No course content, answers, production keys or passwords are written to this tes
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -35,6 +36,13 @@ class TrainingBrowserTests(unittest.TestCase):
             'companyAccounts': [{'id': a, 'label': a, 'password': 'fixture-' + a + '-password'} for a in ['ss7', 'training', 'ptl']],
             'trainingSource': os.environ['TVC_TRAINING_SOURCE'],
         }), text=True, check=True, capture_output=True)
+        fixture_keys = json.loads((cls.base / 'keys.json').read_text())
+        cls.pdf_metadata = {}
+        for manual in ['technician', 'inspector']:
+            relative = f'pdf/calsis-160-{manual}-training-manual.pdf'
+            data = (Path(os.environ['TVC_TRAINING_SOURCE']) / relative).read_bytes()
+            cls.pdf_metadata[manual] = {'path': relative, 'url': fixture_keys['trainingPackages']['calsis-160']['cache'][relative]['file'],
+                                        'hash': hashlib.sha256(data).hexdigest(), 'size': len(data)}
         cls.server = ThreadingHTTPServer(('127.0.0.1', 0), partial(Quiet, directory=str(cls.site)))
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
@@ -48,7 +56,8 @@ class TrainingBrowserTests(unittest.TestCase):
         cls.server.shutdown(); cls.server.server_close(); cls.thread.join(); cls.temp.cleanup()
 
     def start(self, account='ss7', mobile=False, remember=True):
-        context = self.browser.new_context(viewport={'width': 390 if mobile else 1280, 'height': 900}, accept_downloads=True)
+        context = self.browser.new_context(viewport={'width': 390 if mobile else 1280, 'height': 900}, accept_downloads=True,
+                                           is_mobile=mobile, has_touch=mobile)
         self.addCleanup(context.close)
         page = context.new_page()
         errors = []
@@ -110,13 +119,11 @@ class TrainingBrowserTests(unittest.TestCase):
             frame.locator('#next-button').click()
         expect(frame.locator('#result-view')).to_be_visible()
 
-    def test_manual_search_panels_mobile_and_sandbox(self):
+    def test_manual_panels_mobile_and_sandbox(self):
         page, frame, errors = self.start(mobile=True)
         frame.locator('.choice').first.click()
-        expect(frame.locator('#search-box')).to_be_visible(timeout=15000)
-        frame.locator('#search-box').fill('zzzznoresultszzzz')
-        expect(frame.locator('.module-card:visible')).to_have_count(0)
-        frame.locator('#search-box').fill('')
+        expect(frame.locator('#download-manual')).to_be_visible(timeout=15000)
+        expect(frame.locator('#search-box')).to_have_count(0)
         frame.locator('.module-card').first.click()
         expect(frame.locator('.panel')).not_to_have_count(0, timeout=15000)
         dimensions = frame.locator('.stage').first.evaluate('(e) => ({height:e.clientHeight,width:e.clientWidth,flow:getComputedStyle(e).display})')
@@ -137,6 +144,64 @@ class TrainingBrowserTests(unittest.TestCase):
         page.locator('#logout').click()
         expect(page.locator('#login-panel')).to_be_visible()
         self.assertIsNone(page.locator('#tool-frame').get_attribute('srcdoc'))
+        self.assertEqual(errors, [])
+
+    def test_manual_pdf_downloads_for_both_companies_desktop_and_phone(self):
+        for account in ['ss7', 'training']:
+            for mobile in [False, True]:
+                with self.subTest(account=account, mobile=mobile):
+                    page, frame, errors = self.start(account=account, mobile=mobile)
+                    requests = []
+                    page.on('request', lambda r: requests.append((r.method, r.url)))
+                    for index, manual in enumerate(['technician', 'inspector']):
+                        metadata = self.pdf_metadata[manual]
+                        self.assertFalse(any(url.endswith(metadata['url']) for _, url in requests))
+                        frame.locator('.choice').nth(index).click()
+                        expect(frame.locator('#download-manual')).to_be_visible(timeout=15000)
+                        self.assertFalse(any(url.endswith(metadata['url']) for _, url in requests), 'PDF fetched before click')
+                        expect(frame.locator('#search-box')).to_have_count(0)
+                        frame.locator('body').evaluate('''() => {
+                            const original = URL.createObjectURL; window.testPdfBlobs = [];
+                            URL.createObjectURL = blob => { if (blob.type === 'application/pdf') testPdfBlobs.push({type:blob.type,size:blob.size}); return original(blob); };
+                        }''')
+                        revision = json.loads((Path(os.environ['TVC_TRAINING_SOURCE']) / f'quiz/questions-{manual}.json').read_text())['manualRevision']
+                        with page.expect_download(timeout=60000) as downloaded:
+                            frame.locator('#download-manual').click()
+                        download = downloaded.value
+                        self.assertTrue(download.url.startswith('blob:'))
+                        self.assertEqual(download.suggested_filename, f'CALSIS 160 {manual.title()} Training Manual Rev {revision}.pdf')
+                        self.assertIsNone(download.failure())
+                        data = Path(download.path()).read_bytes()
+                        self.assertEqual(hashlib.sha256(data).hexdigest(), metadata['hash'])
+                        self.assertTrue(data.startswith(b'%PDF-'))
+                        self.assertEqual(frame.locator('body').evaluate('() => testPdfBlobs'), [{'type': 'application/pdf', 'size': metadata['size']}])
+                        expect(frame.locator('#download-manual-label')).to_have_text('Download this Manual')
+                        expect(frame.locator('#training-load-error')).to_have_count(0)
+                        self.assertTrue(frame.locator('body').evaluate('() => document.documentElement.scrollWidth <= innerWidth'))
+                        frame.locator('.back-link').click()
+                        expect(frame.locator('.choice')).to_have_count(3, timeout=15000)
+                    self.assertFalse(any(method == 'POST' or 'search-index.json' in url or '/pdf/' in url for method, url in requests))
+                    self.assertEqual(errors, [])
+
+    def test_failed_pdf_download_can_retry(self):
+        page, frame, errors = self.start()
+        url = self.pdf_metadata['inspector']['url']
+        intercepted = []
+        def fail_once(route):
+            intercepted.append(True)
+            if len(intercepted) == 1: route.abort()
+            else: route.continue_()
+        page.route('**/' + url, fail_once)
+        frame.locator('.choice').nth(1).click()
+        expect(frame.locator('#download-manual')).to_be_visible(timeout=15000)
+        frame.locator('#download-manual').click()
+        expect(frame.locator('#download-manual-label')).to_contain_text('could not be downloaded', timeout=15000)
+        with page.expect_download(timeout=60000) as downloaded:
+            frame.locator('#download-manual').click()
+        self.assertIsNone(downloaded.value.failure())
+        self.assertEqual(hashlib.sha256(Path(downloaded.value.path()).read_bytes()).hexdigest(), self.pdf_metadata['inspector']['hash'])
+        expect(frame.locator('#download-manual-label')).to_have_text('Download this Manual')
+        self.assertEqual(len(intercepted), 2)
         self.assertEqual(errors, [])
 
     def test_each_test_and_retry_has_picture_and_hint_minimums(self):

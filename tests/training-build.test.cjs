@@ -3,7 +3,7 @@ const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path"), crypto = require("node:crypto");
 const {build} = require("../scripts/build-staff.cjs");
-const {buildTraining} = require("../scripts/build-training.cjs");
+const {buildTraining, resolveResource} = require("../scripts/build-training.cjs");
 const engine = require("staticrypt/lib/cryptoEngine.js"), codec = require("staticrypt/lib/codec.js").init(engine);
 const root = path.resolve(__dirname, "..");
 function fixture() {
@@ -18,6 +18,9 @@ function fixture() {
     fs.writeFileSync(path.join(source, "assets/training-host.js"), '/* Local adapter fixture */');
     fs.writeFileSync(path.join(source, "assets/app.js"), 'window.privateFixture = true;');
     fs.writeFileSync(path.join(source, "assets/image.png"), 'PRIVATE-PICTURE-FIXTURE');
+    fs.mkdirSync(path.join(source, "pdf"));
+    fs.writeFileSync(path.join(source, "pdf/manual.pdf"), '%PDF-1.4\nPRIVATE-PDF-FIXTURE\n%%EOF');
+    fs.appendFileSync(path.join(source, "index.html"), '<a href="pdf/manual.pdf" download="Manual.pdf">Download manual</a>');
     return {base, source, tools, output, keyFile};
 }
 function decrypt(data, key, resource) {
@@ -48,6 +51,13 @@ test("training stays encrypted, is available only to configured accounts and reu
         assert(!packed.html.includes('<script src='));
         assert(packed.html.includes('data-training-src="assets/image.png"'));
         assert(packed.html.includes('data-training-link="module.html#part-2"'));
+        assert(packed.html.includes('href="pdf/manual.pdf" download="Manual.pdf"'));
+        assert(!packed.html.includes('data-training-link="pdf/manual.pdf"'));
+        assert.equal(resolveResource("technician/index.html", "../pdf/manual.pdf"), "pdf/manual.pdf");
+        assert.equal(manifest.files["pdf/manual.pdf"].type, "application/pdf");
+        const pdf = fs.readFileSync(path.join(f.output, manifest.files["pdf/manual.pdf"].url));
+        assert.equal(decrypt(pdf, data.training.key, "pdf/manual.pdf").toString(), '%PDF-1.4\nPRIVATE-PDF-FIXTURE\n%%EOF');
+        assert(!fs.existsSync(path.join(f.output, "pdf/manual.pdf")));
         assert.deepEqual(packed.scripts, ["assets/app.js"]);
         assert.deepEqual(packed.styles, ["assets/style.css"]);
         const image = fs.readFileSync(path.join(f.output, manifest.files["assets/image.png"].url));
@@ -60,6 +70,7 @@ test("training stays encrypted, is available only to configured accounts and reu
             const encrypted = fs.readFileSync(path.join(f.output, "assets/training/calsis-160", filename));
             assert(!encrypted.includes(Buffer.from("PRIVATE-TRAINING-FIXTURE")));
             assert(!encrypted.includes(Buffer.from("PRIVATE-PICTURE-FIXTURE")));
+            assert(!encrypted.includes(Buffer.from("PRIVATE-PDF-FIXTURE")));
         }
         await build(args);
         const next = await account(f.output, "ss7", "fixture-ss7-password");

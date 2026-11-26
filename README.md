@@ -272,6 +272,12 @@ Each course resource is separately encrypted using AES-256-GCM, with authenticat
 resource paths. Only encrypted `.bin` files enter `assets/training/` here.
 Login does not fetch the course. Opening training loads the requested page and
 its scripts/styles; pictures are decrypted as needed, including pictures in JSON.
+Manual PDFs in `pdf/` are also encrypted separately and fetched only when the
+download button is clicked. `TrainingHost.assetUrl` accepts pictures and PDFs,
+resolves paths relative to the current manual page and returns a typed `blob:`
+URL. Authored download links retain their `href` and filename for the page's
+download handler. Failed asset requests can be retried; PDFs have a three-minute
+request timeout to allow for slower connections.
 
 Optional private-source `access.json` (`version: 1`, `adminOnly: [resource paths]`)
 marks resources that require a separate Admin key. Only the Admin account bundle
