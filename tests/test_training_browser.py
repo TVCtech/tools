@@ -350,12 +350,15 @@ class TrainingBrowserTests(unittest.TestCase):
         expect(frame.locator('#test-label')).to_contain_text('attempt 3', timeout=15000)
         self.answer(frame, 20)
         expect(frame.locator('#result-grade')).to_have_text('Pass with Distinction')
-        self.assertTrue(frame.locator('body').evaluate('() => testDraft'))
+        self.assertFalse(frame.locator('body').evaluate('() => testDraft'))
+        expect(frame.locator('#certificate-preview canvas')).to_be_visible(timeout=15000)
+        expect(frame.locator('#download-button')).to_be_visible()
         with page.expect_download() as download:
             frame.locator('#download-button').click()
         pdf = Path(download.value.path()).read_bytes()
         self.assertTrue(pdf.startswith(b'%PDF-'))
         self.assertIn(b'%%EOF', pdf)
+        self.assertIn(b'/MediaBox [0 0 595.28 841.89]', pdf)
         self.assertEqual(frame.locator('body').evaluate('() => testEvents.map(e => e.status)'), ['Started','Finished'] * 3)
         self.assertEqual(errors, [])
 
@@ -391,6 +394,74 @@ class TrainingBrowserTests(unittest.TestCase):
             self.assertGreaterEqual(len(records), 2)
             self.assertTrue(all(r == records[0] for r in records))
         self.assertTrue(all(r['account'] == 'training' and r['record']['company'] == 'Other Company' for r in captured))
+        self.assertEqual(errors, [])
+
+    def test_portrait_certificates_have_artwork_course_text_and_no_watermark(self):
+        cases = [('ss7', 'technician', False, 14), ('ss7', 'inspector', True, 20),
+                 ('training', 'technician', True, 20), ('training', 'inspector', False, 14)]
+        for account, bank, mobile, score in cases:
+            with self.subTest(account=account, bank=bank, mobile=mobile):
+                page, frame, errors = self.start(account=account, mobile=mobile)
+                self.quiz(page, frame, company='Other Company' if account == 'training' else None, test=bank)
+                frame.locator('body').evaluate('''() => {
+                    window.certificateText = []; window.certificateArtwork = [];
+                    const fill = CanvasRenderingContext2D.prototype.fillText;
+                    const image = CanvasRenderingContext2D.prototype.drawImage;
+                    CanvasRenderingContext2D.prototype.fillText = function(text,...args) { certificateText.push(text); return fill.call(this,text,...args); };
+                    CanvasRenderingContext2D.prototype.drawImage = function(picture,...args) { certificateArtwork.push({src:picture.src,width:picture.naturalWidth,height:picture.naturalHeight}); return image.call(this,picture,...args); };
+                }''')
+                self.answer(frame, score)
+                expect(frame.locator('#certificate-preview canvas')).to_be_visible(timeout=15000)
+                expect(frame.locator('#download-button')).to_be_visible()
+                canvas = frame.locator('#certificate-preview canvas')
+                self.assertEqual(canvas.evaluate('(c) => [c.width,c.height]'), [2481, 3508])
+                self.assertFalse(frame.locator('body').evaluate('() => testDraft'))
+                text = frame.locator('body').evaluate('() => certificateText')
+                self.assertIn(bank.title(), text)
+                self.assertIn('Browser Test', text)
+                self.assertIn('Other Company' if account == 'training' else 'SubSea7', text)
+                self.assertFalse(any('DRAFT' in t or 'TEST CERTIFICATE' in t for t in text))
+                self.assertEqual('with Distinction' in text, score == 20)
+                pictures = frame.locator('body').evaluate('() => certificateArtwork')
+                self.assertEqual(len(pictures), 2)
+                self.assertTrue(all(p['src'].startswith('blob:') and p['width'] > 0 and p['height'] > 0 for p in pictures))
+                with page.expect_download() as downloaded:
+                    frame.locator('#download-button').click()
+                self.assertEqual(downloaded.value.suggested_filename, f'CALSIS 160 {bank.title()} certificate - Browser Test.pdf')
+                pdf = Path(downloaded.value.path()).read_bytes()
+                self.assertTrue(pdf.startswith(b'%PDF-'))
+                self.assertIn(b'/MediaBox [0 0 595.28 841.89]', pdf)
+                self.assertIn(b'/Count 1', pdf)
+                self.assertEqual(errors, [])
+                page.context.close()
+
+    def test_slow_certificate_cannot_replace_retry_and_failed_render_is_handled(self):
+        page, frame, errors = self.start()
+        self.quiz(page, frame)
+        frame.locator('body').evaluate('''() => {
+            const original = TrainingCertificate.drawCertificate; let calls = 0;
+            TrainingCertificate.drawCertificate = details => ++calls === 1
+                ? new Promise(resolve => { window.releaseOldCertificate = async () => resolve(await original(details)); })
+                : original(details);
+        }''')
+        self.answer(frame, 14)
+        expect(frame.locator('#download-button')).to_be_hidden()
+        expect(frame.locator('#certificate-preview canvas')).to_have_count(0)
+        frame.locator('#retry-button').click()
+        expect(frame.locator('#question-view')).to_be_visible(timeout=15000)
+        self.answer(frame, 20)
+        expect(frame.locator('#certificate-preview canvas')).to_be_visible(timeout=15000)
+        frame.locator('#certificate-preview canvas').evaluate('c => c.dataset.latest = "true"')
+        frame.locator('body').evaluate('() => releaseOldCertificate()')
+        expect(frame.locator('#certificate-preview canvas')).to_have_count(1)
+        expect(frame.locator('#certificate-preview canvas')).to_have_attribute('data-latest', 'true')
+        frame.locator('#retry-button').click()
+        expect(frame.locator('#question-view')).to_be_visible(timeout=15000)
+        frame.locator('body').evaluate('() => {TrainingCertificate.drawCertificate = () => Promise.reject(new Error("fixture render failure"));}')
+        self.answer(frame, 20)
+        expect(frame.locator('#result-message')).to_contain_text('certificate could not be prepared')
+        expect(frame.locator('#download-button')).to_be_hidden()
+        expect(frame.locator('#certificate-preview canvas')).to_have_count(0)
         self.assertEqual(errors, [])
 
     def test_unconfigured_customer_keeps_tool_access(self):
